@@ -59,7 +59,7 @@ def get_db() -> sqlite3.Connection:
     path = _db_path()
     if path != ":memory:":
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -192,7 +192,7 @@ def get_setting(conn: sqlite3.Connection, key: str) -> Optional[str]:
 
 
 def set_setting(conn: sqlite3.Connection, key: str, value) -> None:
-    json_value = json.dumps(value) if not isinstance(value, str) else value
+    json_value = json.dumps(value)
     conn.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
         (key, json_value),
