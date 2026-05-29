@@ -1,0 +1,57 @@
+server:
+  port: 8080
+  host: "0.0.0.0"
+
+vmtools:
+  jar_path: "/opt/automation-pilot/VmTools.jar"
+  java_cmd: "java"
+  timeout_seconds: 120
+
+jenkins:
+  url: "https://jenkins.ctera.local"
+  # credentials loaded from env: JENKINS_USER, JENKINS_TOKEN
+  cleanup_job_name: "TBD_CLEANUP_JOB"
+
+thresholds:
+  storage:
+    ready_below: 70
+    constrained_below: 85
+    # saturated: >= 85
+  cpu:
+    ready_below: 75
+    constrained_below: 85
+    # saturated: >= 85
+
+staleness:
+  warning_minutes: 5
+
+deployment_window_minutes: 30
+
+hosts:
+  - "192.168.81.155"
+  - "192.168.81.158"
+
+datastores:
+  - "Hitachi-BS26-Automation-1"
+  - "Hitachi-BS26-Automation-2"
+  - "Hitachi-BS26-Automation-3"
+  - "Hitachi-BS26-Automation-4"
+
+datastore_host: "192.168.81.155"
+datacenter: "CTERA"
+
+vm_folders:
+  - "/DevProd/QA/PIM"
+  - "/DevProd/QA/Portal-Daily"
+  - "/DevProd/QA/Portal-Daily-Toggles"
+  - "/DevProd/QA/Portal-Patch"
+  - "/DevProd/QA/Portal-Patch-Toggles"
+  - "/DevProd/QA/Portal-Smoke"
+
+jobs: []
+  # To be populated later with job definitions:
+  # - id: "dev-nightly"
+  #   name: "Dev Nightly"
+  #   jenkins_job_name: "deploy_and_run_automation_scenario"
+  #   expected_storage_percent: 10.0
+  #   expected_cpu_percent: 15.0
