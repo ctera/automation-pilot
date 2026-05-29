@@ -174,12 +174,12 @@ def list_decisions(
 ) -> list[sqlite3.Row]:
     if intent_id is not None:
         cursor = conn.execute(
-            "SELECT * FROM decisions WHERE intent_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM decisions WHERE intent_id = ? ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?",
             (intent_id, limit, offset),
         )
     else:
         cursor = conn.execute(
-            "SELECT * FROM decisions ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM decisions ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?",
             (limit, offset),
         )
     return cursor.fetchall()
