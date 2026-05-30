@@ -30,7 +30,7 @@ def seed_settings(conn: sqlite3.Connection, cfg: dict[str, Any]) -> None:
     if "jenkins" in cfg:
         set_setting(conn, "jenkins", cfg["jenkins"])
 
-    if "vmtools" in cfg and get_setting(conn, "vmtools") is None:
+    if "vmtools" in cfg:
         set_setting(conn, "vmtools", cfg["vmtools"])
 
 
