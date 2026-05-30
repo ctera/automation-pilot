@@ -35,13 +35,30 @@ make dev-frontend     # Start frontend (port 3000, proxies to 8080)
 
 ## Production Deployment
 
-Target: 192.168.93.13
+| Item | Details |
+|------|---------|
+| URL | `http://192.168.93.13:8080` |
+| Install path | `/opt/automation-pilot` |
+| DB path | `/var/lib/automation-pilot/autopilot.db` |
+| Service user | `autopilot` (non-login) |
+| systemd unit | `automation-pilot.service` (enabled, auto-starts on boot) |
+| Python | 3.9 via `/opt/automation-pilot/.venv/bin/python` |
+| Port | 8080 |
+
+### Deploy Steps
 
 ```bash
-make build deploy
-sudo cp automation-pilot.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now automation-pilot
+make build                          # Build frontend assets
+scp -r backend data frontend/build run.py Makefile automation-pilot.service root@192.168.93.13:/opt/automation-pilot/
+ssh root@192.168.93.13 "cd /opt/automation-pilot && .venv/bin/pip install -r backend/requirements.txt && systemctl restart automation-pilot"
+```
+
+### Useful Commands
+
+```bash
+systemctl status automation-pilot    # check status
+systemctl restart automation-pilot   # restart after redeploy
+journalctl -u automation-pilot -f    # tail logs
 ```
 
 ## Testing
