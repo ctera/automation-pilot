@@ -25,7 +25,9 @@ def seed_settings(conn: sqlite3.Connection, cfg: dict[str, Any]) -> None:
         if key in cfg and get_setting(conn, key) is None:
             set_setting(conn, key, cfg[key])
 
-    if "jenkins" in cfg and get_setting(conn, "jenkins") is None:
+    # Jenkins endpoint is not editable via Settings UI, so keep it synced
+    # from config file on each startup to avoid stale DB values.
+    if "jenkins" in cfg:
         set_setting(conn, "jenkins", cfg["jenkins"])
 
     if "vmtools" in cfg and get_setting(conn, "vmtools") is None:
@@ -76,7 +78,7 @@ def get_vmtools_config(conn: sqlite3.Connection) -> dict:
 
 def get_jenkins_config(conn: sqlite3.Connection) -> dict:
     return _get_json_setting(conn, "jenkins") or {
-        "url": "https://jenkins.ctera.local",
+        "url": "https://jenkins.ctera.dev",
         "cleanup_job_name": "TBD_CLEANUP_JOB",
     }
 

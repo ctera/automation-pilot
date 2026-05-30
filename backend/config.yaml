@@ -57,7 +57,6 @@ vm_folders:
   - "DevProd/QA/Portal-Patch"
   - "DevProd/QA/Portal-Patch-Toggles"
 
-
 jobs: []
   # To be populated later with job definitions:
   # - id: "dev-nightly"

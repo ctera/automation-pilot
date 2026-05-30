@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 import yaml
 
-from backend.config import load_config, seed_settings, get_hosts, get_datastores, get_thresholds
+from backend.config import (
+    get_datastores,
+    get_hosts,
+    get_jenkins_config,
+    get_thresholds,
+    load_config,
+    seed_settings,
+)
 
 
 @pytest.fixture()
@@ -63,3 +70,27 @@ def test_get_thresholds_returns_defaults(config_file, db):
     thresholds = get_thresholds(db)
     assert thresholds["storage"]["ready_below"] == 70
     assert thresholds["cpu"]["constrained_below"] == 85
+
+
+def test_seed_settings_refreshes_jenkins_config(config_file, db):
+    cfg = load_config(str(config_file))
+    seed_settings(db, cfg)
+
+    from backend.db import set_setting
+
+    set_setting(
+        db,
+        "jenkins",
+        {"url": "https://jenkins.ctera.local", "cleanup_job_name": "legacy-cleanup"},
+    )
+    seed_settings(db, cfg)
+
+    jenkins_cfg = get_jenkins_config(db)
+    assert jenkins_cfg["url"] == "https://jenkins.test"
+    assert jenkins_cfg["cleanup_job_name"] == "cleanup"
+
+
+def test_get_jenkins_config_defaults_to_dev(db):
+    jenkins_cfg = get_jenkins_config(db)
+    assert jenkins_cfg["url"] == "https://jenkins.ctera.dev"
+    assert jenkins_cfg["cleanup_job_name"] == "TBD_CLEANUP_JOB"
