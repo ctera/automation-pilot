@@ -17,8 +17,12 @@ export default function StatusBadge({ state = 'unknown', size = 'medium' }) {
       sx={{
         backgroundColor: `${color}22`,
         color: color,
-        border: `1px solid ${color}44`,
-        fontWeight: 700,
+        border: `2px solid ${color}55`,
+        fontWeight: 800,
+        fontSize: '1.25rem',
+        height: 48,
+        px: 2,
+        '& .MuiChip-label': { px: 1.5 },
       }}
     />
   );

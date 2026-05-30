@@ -25,27 +25,28 @@ export default function AdvisoryMessage({ state }) {
     <Alert
       severity={config.severity}
       variant="outlined"
-      icon={isReadyState ? <CheckCircleRoundedIcon sx={{ fontSize: 34, color: 'success.main' }} /> : undefined}
+      icon={isReadyState ? <CheckCircleRoundedIcon sx={{ fontSize: 40, color: 'success.main' }} /> : undefined}
       sx={{
         borderRadius: 2,
-        px: 2.5,
-        py: isReadyState ? 1.25 : 0.75,
+        px: 3.5,
+        py: isReadyState ? 2 : 1.5,
         alignItems: 'center',
         '& .MuiAlert-icon': {
-          mr: isReadyState ? 1.5 : 1,
+          mr: isReadyState ? 2 : 1.5,
           py: 0,
+          fontSize: 32,
         },
         '& .MuiAlert-message': {
-          py: 0.25,
+          py: 0.5,
           width: '100%',
         },
       }}
     >
       <Typography
         sx={{
-          fontSize: isReadyState ? '1.1rem' : '1rem',
+          fontSize: isReadyState ? '1.3rem' : '1.15rem',
           fontWeight: isReadyState ? 700 : 500,
-          lineHeight: 1.35,
+          lineHeight: 1.4,
         }}
       >
         {config.text}

@@ -29,7 +29,7 @@ export default function Dashboard() {
   return (
     <Box>
       <InfraStatusBar />
-      <Box sx={{ mt: 2 }}>
+      <Box sx={{ mt: 2, px: 1 }}>
         <AdvisoryMessage state={infraData?.state} />
       </Box>
 
