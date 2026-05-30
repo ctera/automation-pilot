@@ -44,14 +44,39 @@ make dev-frontend     # Start frontend (port 3000, proxies to 8080)
 | systemd unit | `automation-pilot.service` (enabled, auto-starts on boot) |
 | Python | 3.9 via `/opt/automation-pilot/.venv/bin/python` |
 | Port | 8080 |
+| VmTools.jar | Auto-synced daily at 03:00 from network share |
 
-### Deploy Steps
+### First Deploy
 
 ```bash
-make build                          # Build frontend assets
-scp -r backend data frontend/build run.py Makefile automation-pilot.service root@192.168.93.13:/opt/automation-pilot/
+# 1. Copy project files
+make build
+scp -r backend frontend/build run.py Makefile automation-pilot.service scripts root@192.168.93.13:/opt/automation-pilot/
+
+# 2. Create .env from template and fill in real credentials
+scp .env.example root@192.168.93.13:/opt/automation-pilot/.env
+ssh root@192.168.93.13 "vi /opt/automation-pilot/.env"   # fill in secrets
+
+# 3. Fetch VmTools.jar for the first time
+ssh root@192.168.93.13 "chmod +x /opt/automation-pilot/scripts/sync-vmtools.sh && /opt/automation-pilot/scripts/sync-vmtools.sh"
+
+# 4. Install cron for daily sync (03:00)
+ssh root@192.168.93.13 'echo "0 3 * * * /opt/automation-pilot/scripts/sync-vmtools.sh" | crontab -'
+
+# 5. Start the service
+ssh root@192.168.93.13 "cd /opt/automation-pilot && .venv/bin/pip install -r backend/requirements.txt && systemctl enable --now automation-pilot"
+```
+
+### Subsequent Deploys
+
+```bash
+make build
+scp -r backend frontend/build run.py Makefile scripts root@192.168.93.13:/opt/automation-pilot/
 ssh root@192.168.93.13 "cd /opt/automation-pilot && .venv/bin/pip install -r backend/requirements.txt && systemctl restart automation-pilot"
 ```
+
+> **Note:** `.env` is never overwritten — it lives on the server only.
+> `VmTools.jar` is kept current by the daily cron job.
 
 ### Useful Commands
 
@@ -59,6 +84,7 @@ ssh root@192.168.93.13 "cd /opt/automation-pilot && .venv/bin/pip install -r bac
 systemctl status automation-pilot    # check status
 systemctl restart automation-pilot   # restart after redeploy
 journalctl -u automation-pilot -f    # tail logs
+/opt/automation-pilot/scripts/sync-vmtools.sh  # manually sync VmTools.jar
 ```
 
 ## Testing

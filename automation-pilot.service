@@ -7,12 +7,9 @@ Type=simple
 User=autopilot
 Group=autopilot
 WorkingDirectory=/opt/automation-pilot
+EnvironmentFile=/opt/automation-pilot/.env
 Environment=AUTOPILOT_CONFIG=/opt/automation-pilot/backend/config.yaml
 Environment=AUTOPILOT_DB_PATH=/var/lib/automation-pilot/autopilot.db
-Environment=JENKINS_USER=
-Environment=JENKINS_TOKEN=
-Environment=VMTOOLS_USER=
-Environment=VMTOOLS_PASSWORD=
 ExecStart=/opt/automation-pilot/.venv/bin/python run.py
 Restart=on-failure
 RestartSec=5
