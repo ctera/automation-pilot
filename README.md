@@ -126,6 +126,7 @@ sudo -u autopilot -H bash -lc '/opt/automation-pilot/scripts/autopilot-update.sh
 **Fetch latest changes as user autopilot:**
 
 ```bash
+chmod +x /opt/automation-pilot/scripts/*.sh
 sudo -u autopilot -H bash -lc '/opt/automation-pilot/scripts/autopilot-update.sh'
 ```
 
