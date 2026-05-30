@@ -3,6 +3,18 @@ import { refreshInfra, getJenkinsJobStatuses } from '../services/api';
 
 const InfraContext = createContext(null);
 
+const REFRESH_COOLDOWN_MS = 10_000;
+const STORAGE_KEY = 'pilot_last_refresh_ts';
+
+function getLastRefreshTs() {
+  const val = sessionStorage.getItem(STORAGE_KEY);
+  return val ? Number(val) : 0;
+}
+
+function setLastRefreshTs(ts) {
+  sessionStorage.setItem(STORAGE_KEY, String(ts));
+}
+
 export function InfraProvider({ children }) {
   const [infraData, setInfraData] = useState(null);
   const [jenkinsJobs, setJenkinsJobs] = useState(null);
@@ -11,11 +23,18 @@ export function InfraProvider({ children }) {
   const [refreshDurationMs, setRefreshDurationMs] = useState(null);
   const [error, setError] = useState(null);
   const startTimeRef = useRef(null);
+  const inFlightRef = useRef(false);
 
   const refresh = useCallback(async () => {
+    const now = Date.now();
+    if (inFlightRef.current || now - getLastRefreshTs() < REFRESH_COOLDOWN_MS) {
+      return;
+    }
+    inFlightRef.current = true;
+    setLastRefreshTs(now);
+    startTimeRef.current = performance.now();
     setLoading(true);
     setError(null);
-    startTimeRef.current = performance.now();
     try {
       const [infraResult, jenkinsResult] = await Promise.allSettled([
         refreshInfra(),
@@ -33,6 +52,7 @@ export function InfraProvider({ children }) {
     } finally {
       setRefreshDurationMs(Math.round(performance.now() - startTimeRef.current));
       setLoading(false);
+      inFlightRef.current = false;
     }
   }, []);
 
