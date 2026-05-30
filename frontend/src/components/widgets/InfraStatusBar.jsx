@@ -5,11 +5,17 @@ import StatusBadge from '../StatusBadge';
 import WidgetInfoTip from '../WidgetInfoTip';
 
 export default function InfraStatusBar() {
-  const { infraData, lastRefresh, loading, refresh } = useInfra();
+  const { infraData, lastRefresh, loading, refreshDurationMs, refresh } = useInfra();
   const state = infraData?.state || 'unknown';
 
   const stalenessMinutes = lastRefresh
     ? Math.floor((Date.now() - lastRefresh.getTime()) / 60000)
+    : null;
+
+  const durationLabel = refreshDurationMs != null
+    ? refreshDurationMs >= 1000
+      ? `${(refreshDurationMs / 1000).toFixed(1)}s`
+      : `${refreshDurationMs}ms`
     : null;
 
   return (
@@ -25,6 +31,11 @@ export default function InfraStatusBar() {
       >
         Refresh
       </Button>
+      {durationLabel && !loading && (
+        <Typography variant="body2" color="text.secondary">
+          took {durationLabel}
+        </Typography>
+      )}
       {stalenessMinutes !== null && stalenessMinutes >= 5 && (
         <Typography variant="body2" color="warning.main">
           Data is {stalenessMinutes} minutes old — Refresh?

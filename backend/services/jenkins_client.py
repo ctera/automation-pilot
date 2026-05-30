@@ -68,6 +68,8 @@ class JenkinsClient:
         resp.raise_for_status()
         data = resp.json()
 
+        job_url = f"{self._base}/job/{job_name}/"
+
         last_build = data.get("lastBuild")
         if not last_build:
             return {
@@ -76,6 +78,7 @@ class JenkinsClient:
                 "build_number": None,
                 "duration_seconds": None,
                 "estimated_duration_seconds": None,
+                "job_url": job_url,
                 "build_url": None,
                 "parameters": None,
             }
@@ -107,6 +110,7 @@ class JenkinsClient:
             "build_number": last_build.get("number"),
             "duration_seconds": duration_seconds,
             "estimated_duration_seconds": estimated_seconds,
+            "job_url": job_url,
             "build_url": last_build.get("url"),
             "parameters": extracted_params or None,
         }
@@ -124,6 +128,7 @@ class JenkinsClient:
                     "build_number": None,
                     "duration_seconds": None,
                     "estimated_duration_seconds": None,
+                    "job_url": f"{self._base}/job/{name}/",
                     "build_url": None,
                     "parameters": None,
                     "error": str(exc),

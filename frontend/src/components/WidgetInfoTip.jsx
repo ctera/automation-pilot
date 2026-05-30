@@ -10,17 +10,12 @@ export default function WidgetInfoTip({ text }) {
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 18,
-          height: 18,
-          borderRadius: '50%',
-          border: '1.5px solid',
-          borderColor: 'text.disabled',
           cursor: 'help',
           ml: 1,
           verticalAlign: 'middle',
         }}
       >
-        <InfoOutlinedIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
+        <InfoOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
       </Box>
     </Tooltip>
   );

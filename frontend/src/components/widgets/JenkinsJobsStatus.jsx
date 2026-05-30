@@ -1,8 +1,7 @@
 import {
-  Card, CardContent, Typography, Chip, IconButton, Tooltip,
+  Card, CardContent, Typography, Chip, Tooltip, Link,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box,
 } from '@mui/material';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useInfra } from '../../context/InfraContext';
 import WidgetInfoTip from '../WidgetInfoTip';
@@ -12,10 +11,6 @@ function formatDuration(seconds) {
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
-
-function humanJobName(name) {
-  return name.replace(/_/g, ' ');
 }
 
 function DetailsCell({ params }) {
@@ -79,7 +74,6 @@ export default function JenkinsJobsStatus() {
                 <TableCell>Details</TableCell>
                 <TableCell>Build</TableCell>
                 <TableCell>Duration</TableCell>
-                <TableCell sx={{ width: 48 }}>Link</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -87,7 +81,19 @@ export default function JenkinsJobsStatus() {
                 <TableRow key={job.job_name}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Typography variant="body2">{humanJobName(job.job_name)}</Typography>
+                      {job.job_url ? (
+                        <Link
+                          href={job.job_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          underline="hover"
+                          variant="body2"
+                        >
+                          {job.job_name}
+                        </Link>
+                      ) : (
+                        <Typography variant="body2">{job.job_name}</Typography>
+                      )}
                       {job.error && (
                         <Tooltip title={job.error}>
                           <WarningAmberIcon fontSize="small" color="warning" />
@@ -107,22 +113,24 @@ export default function JenkinsJobsStatus() {
                     {job.is_building ? <DetailsCell params={job.parameters} /> : '--'}
                   </TableCell>
                   <TableCell>
-                    {job.build_number ? `#${job.build_number}` : '--'}
+                    {job.build_number ? (
+                      job.build_url ? (
+                        <Link
+                          href={job.build_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          underline="hover"
+                          variant="body2"
+                        >
+                          #{job.build_number}
+                        </Link>
+                      ) : (
+                        `#${job.build_number}`
+                      )
+                    ) : '--'}
                   </TableCell>
                   <TableCell>
                     {job.is_building ? formatDuration(job.duration_seconds) : '--'}
-                  </TableCell>
-                  <TableCell>
-                    {job.build_url ? (
-                      <IconButton
-                        size="small"
-                        href={job.build_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <OpenInNewIcon fontSize="small" />
-                      </IconButton>
-                    ) : '--'}
                   </TableCell>
                 </TableRow>
               ))}

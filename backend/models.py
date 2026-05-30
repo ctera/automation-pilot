@@ -143,6 +143,7 @@ class JenkinsJobStatus(BaseModel):
     build_number: Optional[int] = None
     duration_seconds: Optional[float] = None
     estimated_duration_seconds: Optional[float] = None
+    job_url: Optional[str] = None
     build_url: Optional[str] = None
     parameters: Optional[dict] = None
     error: Optional[str] = None

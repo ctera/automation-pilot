@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { refreshInfra, getInfraStatus, getJenkinsJobStatuses } from '../services/api';
+import { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
+import { refreshInfra, getJenkinsJobStatuses } from '../services/api';
 
 const InfraContext = createContext(null);
 
@@ -8,45 +8,37 @@ export function InfraProvider({ children }) {
   const [jenkinsJobs, setJenkinsJobs] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [refreshDurationMs, setRefreshDurationMs] = useState(null);
   const [error, setError] = useState(null);
+  const startTimeRef = useRef(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
+    startTimeRef.current = performance.now();
     try {
-      const [infraResp, jenkinsResp] = await Promise.all([
+      const [infraResult, jenkinsResult] = await Promise.allSettled([
         refreshInfra(),
-        getJenkinsJobStatuses().catch(() => ({ data: null })),
+        getJenkinsJobStatuses(),
       ]);
-      setInfraData(infraResp.data);
-      setJenkinsJobs(jenkinsResp.data);
-      setLastRefresh(new Date());
-    } catch (err) {
-      setError(err.response?.data?.detail || err.message);
+      if (infraResult.status === 'fulfilled') {
+        setInfraData(infraResult.value.data);
+        setLastRefresh(new Date());
+      } else {
+        setError(infraResult.reason?.response?.data?.detail || infraResult.reason?.message);
+      }
+      if (jenkinsResult.status === 'fulfilled') {
+        setJenkinsJobs(jenkinsResult.value.data);
+      }
     } finally {
+      setRefreshDurationMs(Math.round(performance.now() - startTimeRef.current));
       setLoading(false);
     }
   }, []);
 
-  const loadCurrent = useCallback(async () => {
-    try {
-      const [infraResp, jenkinsResp] = await Promise.all([
-        getInfraStatus(),
-        getJenkinsJobStatuses().catch(() => ({ data: null })),
-      ]);
-      setInfraData(infraResp.data);
-      setJenkinsJobs(jenkinsResp.data);
-      if (infraResp.data.timestamp) {
-        setLastRefresh(new Date(infraResp.data.timestamp));
-      }
-    } catch {
-      // no cached data yet
-    }
-  }, []);
-
   const value = useMemo(
-    () => ({ infraData, jenkinsJobs, lastRefresh, loading, error, refresh, loadCurrent }),
-    [infraData, jenkinsJobs, lastRefresh, loading, error, refresh, loadCurrent]
+    () => ({ infraData, jenkinsJobs, lastRefresh, loading, refreshDurationMs, error, refresh }),
+    [infraData, jenkinsJobs, lastRefresh, loading, refreshDurationMs, error, refresh]
   );
 
   return <InfraContext.Provider value={value}>{children}</InfraContext.Provider>;

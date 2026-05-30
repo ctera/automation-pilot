@@ -13,18 +13,18 @@ import RecentDecisions from '../components/widgets/RecentDecisions';
 import JenkinsJobsStatus from '../components/widgets/JenkinsJobsStatus';
 
 export default function Dashboard() {
-  const { infraData, loadCurrent } = useInfra();
+  const { infraData, refresh } = useInfra();
   const { lastMessage } = useWebSocket();
 
   useEffect(() => {
-    loadCurrent();
-  }, [loadCurrent]);
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (lastMessage?.type === 'infra_update') {
-      loadCurrent();
+      refresh();
     }
-  }, [lastMessage, loadCurrent]);
+  }, [lastMessage, refresh]);
 
   return (
     <Box>
