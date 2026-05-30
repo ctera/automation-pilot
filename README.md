@@ -78,6 +78,51 @@ ssh root@192.168.93.13 "cd /opt/automation-pilot && .venv/bin/pip install -r bac
 > **Note:** `.env` is never overwritten — it lives on the server only.
 > `VmTools.jar` is kept current by the daily cron job.
 
+### Auto-Update (Cron)
+
+The server polls GitHub every 5 minutes and auto-deploys new commits from `main`.
+The script at `scripts/autopilot-update.sh` handles everything:
+
+1. `git fetch` + compare — exits immediately if nothing changed (~1s)
+2. `git pull --ff-only` — fails loudly on conflicts (never auto-merges)
+3. Conditional rebuild — only runs `npm run build` if `frontend/` changed, only runs `pip install` if `requirements.txt` changed
+4. `systemctl restart automation-pilot`
+5. Verify the service came back up
+
+**Setup (run as the `autopilot` user on the server):**
+
+```bash
+# Ensure the script is executable
+chmod +x /opt/automation-pilot/scripts/autopilot-update.sh
+
+# Install the cron job
+make setup-cron
+
+# Or manually:
+(crontab -l 2>/dev/null; echo "*/5 * * * * /opt/automation-pilot/scripts/autopilot-update.sh >> /opt/automation-pilot/logs/cron-update.log 2>&1") | crontab -
+```
+
+**Prerequisites:**
+
+- `autopilot` user can `git pull` from GitHub (SSH key or stored HTTPS credential)
+- Passwordless sudo for service restart: add to `/etc/sudoers.d/autopilot`:
+  ```
+  autopilot ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart automation-pilot, /usr/bin/systemctl stop automation-pilot, /usr/bin/systemctl start automation-pilot
+  ```
+- Node.js/npm in PATH for frontend builds
+
+**Logs:**
+
+- Update log: `/opt/automation-pilot/logs/update.log`
+- Cron output: `/opt/automation-pilot/logs/cron-update.log`
+- Syslog: `journalctl -t autopilot-update`
+
+**Test without restarting:**
+
+```bash
+/opt/automation-pilot/scripts/autopilot-update.sh --dry-run
+```
+
 ### Useful Commands
 
 ```bash

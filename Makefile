@@ -1,4 +1,4 @@
-.PHONY: install dev build deploy test
+.PHONY: install dev build deploy test setup-cron
 
 PYTHON := python3
 VENV := .venv
@@ -29,3 +29,9 @@ test:
 deploy: build
 	@echo "Copy repo to /opt/automation-pilot on target server"
 	@echo "Then: sudo systemctl enable automation-pilot && sudo systemctl start automation-pilot"
+
+setup-cron:
+	@echo "Installing auto-update cron (every 5 minutes) for user autopilot..."
+	(crontab -l 2>/dev/null | grep -v 'autopilot-update.sh'; \
+	 echo "*/5 * * * * /opt/automation-pilot/scripts/autopilot-update.sh >> /opt/automation-pilot/logs/cron-update.log 2>&1") | crontab -
+	@echo "Done. Verify with: crontab -l"
