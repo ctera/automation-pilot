@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from backend.config import (
     get_hosts, get_datastores, get_datastore_host, get_datacenter,
     get_vm_folders, get_thresholds, get_job_definitions,
-    get_staleness_config, get_deployment_window,
+    get_staleness_config, get_deployment_window, get_monitored_jenkins_jobs,
 )
 from backend.db import set_setting
 
@@ -20,6 +20,7 @@ _db: sqlite3.Connection = None
 ALLOWED_KEYS = {
     "hosts", "datastores", "datastore_host", "datacenter",
     "vm_folders", "thresholds", "jobs", "staleness", "deployment_window_minutes",
+    "monitored_jenkins_jobs",
 }
 
 
@@ -46,6 +47,7 @@ async def get_all_settings():
         "jobs": get_job_definitions(_db),
         "staleness": get_staleness_config(_db),
         "deployment_window_minutes": get_deployment_window(_db),
+        "monitored_jenkins_jobs": get_monitored_jenkins_jobs(_db),
     }
 
 

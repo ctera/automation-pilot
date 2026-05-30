@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from typing import Optional
@@ -55,6 +56,18 @@ class InfraMonitor:
                 count += 1
         return count
 
+    def get_folder_vm_states(self, folder: str, datacenter: str) -> FolderVmCount:
+        """Get per-VM power state for all VMs in a folder using getVmState."""
+        result = self._run_vmtools("getVmState", "--folder", folder, datacenter, ".+")
+        try:
+            vms = json.loads(result.stdout.strip())
+            total = len(vms)
+            powered_on = sum(1 for vm in vms if vm.get("powerState") == "poweredOn")
+            return FolderVmCount(folder=folder, count=total, powered_on=powered_on)
+        except (json.JSONDecodeError, ValueError):
+            count = self.count_vms_in_folder(folder, datacenter)
+            return FolderVmCount(folder=folder, count=count, powered_on=0)
+
     def get_all_datastores(self, datastores: list[str], host: str) -> list[DatastoreStatus]:
         results = []
         for ds in datastores:
@@ -77,10 +90,9 @@ class InfraMonitor:
         results = []
         for folder in folders:
             try:
-                count = self.count_vms_in_folder(folder, datacenter)
+                results.append(self.get_folder_vm_states(folder, datacenter))
             except (RuntimeError, subprocess.TimeoutExpired):
-                count = -1
-            results.append(FolderVmCount(folder=folder, count=count))
+                results.append(FolderVmCount(folder=folder, count=-1, powered_on=0))
         return results
 
     @staticmethod

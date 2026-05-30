@@ -2,6 +2,7 @@ import { Box, Button, Typography, CircularProgress } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useInfra } from '../../context/InfraContext';
 import StatusBadge from '../StatusBadge';
+import WidgetInfoTip from '../WidgetInfoTip';
 
 export default function InfraStatusBar() {
   const { infraData, lastRefresh, loading, refresh } = useInfra();
@@ -14,6 +15,7 @@ export default function InfraStatusBar() {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, flexWrap: 'wrap' }}>
       <StatusBadge state={state} />
+      <WidgetInfoTip text="Overall infrastructure state: Ready (all resources available), Constrained (approaching limits), or Saturated (at capacity). Click Refresh to re-scan all hosts, datastores, VM folders, and Jenkins jobs." />
       <Button
         variant="outlined"
         size="small"

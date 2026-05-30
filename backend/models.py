@@ -101,6 +101,7 @@ class HostStatus(BaseModel):
 class FolderVmCount(BaseModel):
     folder: str
     count: int
+    powered_on: int = 0
 
 
 class InfraSnapshot(BaseModel):
@@ -134,3 +135,14 @@ class StopRequest(BaseModel):
 
 class ReprioritizeRequest(BaseModel):
     priority: Priority
+
+
+class JenkinsJobStatus(BaseModel):
+    job_name: str
+    is_building: bool = False
+    build_number: Optional[int] = None
+    duration_seconds: Optional[float] = None
+    estimated_duration_seconds: Optional[float] = None
+    build_url: Optional[str] = None
+    parameters: Optional[dict] = None
+    error: Optional[str] = None

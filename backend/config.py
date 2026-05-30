@@ -10,7 +10,7 @@ import yaml
 
 from backend.db import get_setting, set_setting
 
-_SEED_KEYS = ("hosts", "datastores", "datastore_host", "datacenter", "vm_folders", "thresholds", "jobs", "staleness", "deployment_window_minutes")
+_SEED_KEYS = ("hosts", "datastores", "datastore_host", "datacenter", "vm_folders", "thresholds", "jobs", "staleness", "deployment_window_minutes", "monitored_jenkins_jobs")
 
 
 def load_config(path: Optional[str] = None) -> dict[str, Any]:
@@ -92,3 +92,7 @@ def get_staleness_config(conn: sqlite3.Connection) -> dict:
 def get_deployment_window(conn: sqlite3.Connection) -> int:
     val = _get_json_setting(conn, "deployment_window_minutes")
     return val if val is not None else 30
+
+
+def get_monitored_jenkins_jobs(conn: sqlite3.Connection) -> list[str]:
+    return _get_json_setting(conn, "monitored_jenkins_jobs") or []

@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { refreshInfra, getInfraStatus } from '../services/api';
+import { refreshInfra, getInfraStatus, getJenkinsJobStatuses } from '../services/api';
 
 const InfraContext = createContext(null);
 
 export function InfraProvider({ children }) {
   const [infraData, setInfraData] = useState(null);
+  const [jenkinsJobs, setJenkinsJobs] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -13,8 +14,12 @@ export function InfraProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      const resp = await refreshInfra();
-      setInfraData(resp.data);
+      const [infraResp, jenkinsResp] = await Promise.all([
+        refreshInfra(),
+        getJenkinsJobStatuses().catch(() => ({ data: null })),
+      ]);
+      setInfraData(infraResp.data);
+      setJenkinsJobs(jenkinsResp.data);
       setLastRefresh(new Date());
     } catch (err) {
       setError(err.response?.data?.detail || err.message);
@@ -25,10 +30,14 @@ export function InfraProvider({ children }) {
 
   const loadCurrent = useCallback(async () => {
     try {
-      const resp = await getInfraStatus();
-      setInfraData(resp.data);
-      if (resp.data.timestamp) {
-        setLastRefresh(new Date(resp.data.timestamp));
+      const [infraResp, jenkinsResp] = await Promise.all([
+        getInfraStatus(),
+        getJenkinsJobStatuses().catch(() => ({ data: null })),
+      ]);
+      setInfraData(infraResp.data);
+      setJenkinsJobs(jenkinsResp.data);
+      if (infraResp.data.timestamp) {
+        setLastRefresh(new Date(infraResp.data.timestamp));
       }
     } catch {
       // no cached data yet
@@ -36,8 +45,8 @@ export function InfraProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ infraData, lastRefresh, loading, error, refresh, loadCurrent }),
-    [infraData, lastRefresh, loading, error, refresh, loadCurrent]
+    () => ({ infraData, jenkinsJobs, lastRefresh, loading, error, refresh, loadCurrent }),
+    [infraData, jenkinsJobs, lastRefresh, loading, error, refresh, loadCurrent]
   );
 
   return <InfraContext.Provider value={value}>{children}</InfraContext.Provider>;

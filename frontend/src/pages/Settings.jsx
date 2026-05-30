@@ -150,6 +150,7 @@ export default function Settings() {
           <EditableList title="ESXi Hosts" items={settings.hosts} settingKey="hosts" onSave={handleSave} />
           <EditableList title="Datastores" items={settings.datastores} settingKey="datastores" onSave={handleSave} />
           <EditableList title="VM Folders" items={settings.vm_folders} settingKey="vm_folders" onSave={handleSave} />
+          <EditableList title="Monitored Jenkins Jobs" items={settings.monitored_jenkins_jobs} settingKey="monitored_jenkins_jobs" onSave={handleSave} />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <ThresholdEditor thresholds={settings.thresholds} onSave={handleSave} />

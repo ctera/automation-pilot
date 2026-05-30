@@ -1,6 +1,7 @@
 import { Card, CardContent, Typography, Box, LinearProgress } from '@mui/material';
 import { useInfra } from '../../context/InfraContext';
 import { infraColors } from '../../theme';
+import WidgetInfoTip from '../WidgetInfoTip';
 
 function barColor(percent) {
   if (percent >= 85) return infraColors.saturated;
@@ -16,7 +17,10 @@ export default function StorageCluster() {
   return (
     <Card>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Storage Cluster</Typography>
+        <Typography variant="h6" gutterBottom>
+          Storage Cluster
+          <WidgetInfoTip text="Disk usage across all configured datastores. Shows aggregate cluster usage and per-datastore breakdown. Green < 70%, yellow 70-85%, red >= 85%." />
+        </Typography>
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
             Aggregate: {clusterPercent.toFixed(1)}%

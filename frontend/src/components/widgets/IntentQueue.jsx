@@ -8,6 +8,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import StopIcon from '@mui/icons-material/Stop';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import { getIntents, cancelIntent, stopIntent, reprioritizeIntent } from '../../services/api';
+import WidgetInfoTip from '../WidgetInfoTip';
 
 const statusColors = {
   pending: 'default',
@@ -65,7 +66,10 @@ export default function IntentQueue() {
   return (
     <Card>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Intent Queue</Typography>
+        <Typography variant="h6" gutterBottom>
+          Intent Queue
+          <WidgetInfoTip text="All non-terminal job intents managed by the pilot (pending, queued, preparing, triggering, running). Use the action buttons to cancel, stop, or reprioritize jobs." />
+        </Typography>
         {intents.length === 0 ? (
           <Typography variant="body2" color="text.secondary">No active intents</Typography>
         ) : (

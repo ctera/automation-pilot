@@ -28,6 +28,7 @@ from backend.config import (
 )
 from backend.db import get_db, init_db
 from backend.routes import decisions, infrastructure, intents, jobs, settings, webhooks
+from backend.routes import jenkins_status
 from backend.services.decision_logger import DecisionLogger
 from backend.services.infra_monitor import InfraMonitor
 from backend.services.intent_manager import IntentManager
@@ -121,6 +122,7 @@ async def lifespan(app: FastAPI):
     decisions.init_decisions(decision_logger)
     settings.init_settings(db)
     jobs.init_jobs(db)
+    jenkins_status.init_jenkins_status(jenkins_client, db)
 
     app.state.ws_manager = ws_manager
 
@@ -143,6 +145,7 @@ app.include_router(infrastructure.router)
 app.include_router(decisions.router)
 app.include_router(settings.router)
 app.include_router(jobs.router)
+app.include_router(jenkins_status.router)
 
 
 @app.websocket("/ws")

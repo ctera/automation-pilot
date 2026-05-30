@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Optional
 
 import requests
 
 logger = logging.getLogger(__name__)
+
+_EXTRACT_PARAMS = {"IMG_TEMPLATE_NAME", "PortalImageVersion", "Run_with_toggles", "Upgrade_List"}
 
 
 class JenkinsClient:
@@ -53,3 +56,76 @@ class JenkinsClient:
                 if exe:
                     builds.append(exe)
         return builds
+
+    def get_job_status(self, job_name: str) -> dict:
+        """Fetch current build status for a single job."""
+        url = self._url(f"job/{job_name}/api/json")
+        params = {
+            "tree": "name,displayName,lastBuild[number,building,timestamp,duration,"
+                    "estimatedDuration,result,url,actions[parameters[name,value]]]"
+        }
+        resp = requests.get(url, auth=self._auth, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+
+        last_build = data.get("lastBuild")
+        if not last_build:
+            return {
+                "job_name": job_name,
+                "is_building": False,
+                "build_number": None,
+                "duration_seconds": None,
+                "estimated_duration_seconds": None,
+                "build_url": None,
+                "parameters": None,
+            }
+
+        is_building = last_build.get("building", False)
+
+        if is_building:
+            elapsed_ms = time.time() * 1000 - last_build.get("timestamp", 0)
+            duration_seconds = round(elapsed_ms / 1000, 1)
+        else:
+            duration_seconds = round(last_build.get("duration", 0) / 1000, 1)
+
+        estimated_ms = last_build.get("estimatedDuration")
+        estimated_seconds = round(estimated_ms / 1000, 1) if estimated_ms else None
+
+        extracted_params = {}
+        for action in last_build.get("actions", []):
+            if not isinstance(action, dict):
+                continue
+            for param in action.get("parameters", []):
+                name = param.get("name", "")
+                value = param.get("value")
+                if name in _EXTRACT_PARAMS and value not in (None, ""):
+                    extracted_params[name] = value
+
+        return {
+            "job_name": job_name,
+            "is_building": is_building,
+            "build_number": last_build.get("number"),
+            "duration_seconds": duration_seconds,
+            "estimated_duration_seconds": estimated_seconds,
+            "build_url": last_build.get("url"),
+            "parameters": extracted_params or None,
+        }
+
+    def get_monitored_job_statuses(self, job_names: list[str]) -> list[dict]:
+        """Fetch status for all monitored jobs."""
+        results = []
+        for name in job_names:
+            try:
+                results.append(self.get_job_status(name))
+            except Exception as exc:
+                results.append({
+                    "job_name": name,
+                    "is_building": False,
+                    "build_number": None,
+                    "duration_seconds": None,
+                    "estimated_duration_seconds": None,
+                    "build_url": None,
+                    "parameters": None,
+                    "error": str(exc),
+                })
+        return results

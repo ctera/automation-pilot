@@ -1,6 +1,7 @@
 import { Card, CardContent, Typography, Box, LinearProgress, Alert } from '@mui/material';
 import { useInfra } from '../../context/InfraContext';
 import { infraColors } from '../../theme';
+import WidgetInfoTip from '../WidgetInfoTip';
 
 function cpuColor(percent) {
   if (percent >= 85) return infraColors.saturated;
@@ -16,7 +17,10 @@ export default function HostCpuGauges() {
   return (
     <Card>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Host CPU</Typography>
+        <Typography variant="h6" gutterBottom>
+          Host CPU
+          <WidgetInfoTip text="CPU utilization for each ESXi host. The pilot uses the highest value to determine infrastructure state. Green < 75%, yellow 75-85%, red >= 85%." />
+        </Typography>
         {hosts.map((h) => (
           <Box key={h.ip} sx={{ mb: 1.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

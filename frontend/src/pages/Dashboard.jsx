@@ -10,6 +10,7 @@ import ActiveJobs from '../components/widgets/ActiveJobs';
 import AdvisoryMessage from '../components/AdvisoryMessage';
 import IntentQueue from '../components/widgets/IntentQueue';
 import RecentDecisions from '../components/widgets/RecentDecisions';
+import JenkinsJobsStatus from '../components/widgets/JenkinsJobsStatus';
 
 export default function Dashboard() {
   const { infraData, loadCurrent } = useInfra();
@@ -47,6 +48,9 @@ export default function Dashboard() {
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <RecentDecisions />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <JenkinsJobsStatus />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <IntentQueue />

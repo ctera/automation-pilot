@@ -18,5 +18,6 @@ export const getSettings = () => api.get('/settings');
 export const updateSetting = (key, value) =>
   api.put(`/settings/${key}`, { value });
 export const getJobs = () => api.get('/jobs');
+export const getJenkinsJobStatuses = () => api.get('/jenkins/job-statuses');
 
 export default api;

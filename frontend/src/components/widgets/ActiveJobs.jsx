@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, Typography, Box, Chip, CircularProgress } from '@mui/material';
 import { getIntents } from '../../services/api';
+import WidgetInfoTip from '../WidgetInfoTip';
 
 export default function ActiveJobs() {
   const [intents, setIntents] = useState([]);
@@ -25,7 +26,10 @@ export default function ActiveJobs() {
   return (
     <Card>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Active Jobs</Typography>
+        <Typography variant="h6" gutterBottom>
+          Active Jobs
+          <WidgetInfoTip text="Jobs that the pilot orchestrator has actively dispatched or is currently triggering. Shows only running/triggering intents — a quick glance at what's consuming infrastructure right now." />
+        </Typography>
         {loading ? (
           <CircularProgress size={20} />
         ) : intents.length === 0 ? (
