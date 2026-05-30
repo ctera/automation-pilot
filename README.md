@@ -117,10 +117,16 @@ make setup-cron
 - Cron output: `/opt/automation-pilot/logs/cron-update.log`
 - Syslog: `journalctl -t autopilot-update`
 
-**Test without restarting:**
+**Test if new changes are available without restarting:**
 
 ```bash
-/opt/automation-pilot/scripts/autopilot-update.sh --dry-run
+sudo -u autopilot -H bash -lc '/opt/automation-pilot/scripts/autopilot-update.sh --dry-run'
+```
+
+**Fetch latest changes as user autopilot:**
+
+```bash
+sudo -u autopilot -H bash -lc '/opt/automation-pilot/scripts/autopilot-update.sh'
 ```
 
 ### Useful Commands
