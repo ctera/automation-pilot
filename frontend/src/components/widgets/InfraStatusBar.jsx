@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Box, Button, Typography, CircularProgress } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useInfra } from '../../context/InfraContext';
@@ -5,11 +6,40 @@ import StatusBadge from '../StatusBadge';
 import WidgetInfoTip from '../WidgetInfoTip';
 
 export default function InfraStatusBar() {
-  const { infraData, lastRefresh, loading, refreshDurationMs, refresh } = useInfra();
+  const {
+    infraData,
+    lastRefresh,
+    loading,
+    refreshStartedAt,
+    refreshDurationMs,
+    refresh,
+  } = useInfra();
   const state = infraData?.state || 'unknown';
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  useEffect(() => {
+    if (!loading) {
+      return undefined;
+    }
+    setNowMs(Date.now());
+    const timerId = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [loading]);
 
   const stalenessMinutes = lastRefresh
     ? Math.floor((Date.now() - lastRefresh.getTime()) / 60000)
+    : null;
+
+  const runningDurationMs = loading && refreshStartedAt
+    ? Math.max(0, nowMs - refreshStartedAt)
+    : null;
+
+  const runningDurationLabel = runningDurationMs != null
+    ? runningDurationMs >= 1000
+      ? `${Math.floor(runningDurationMs / 1000)}s`
+      : `${Math.round(runningDurationMs)}ms`
     : null;
 
   const durationLabel = refreshDurationMs != null
@@ -31,12 +61,17 @@ export default function InfraStatusBar() {
       >
         Refresh
       </Button>
+      {loading && runningDurationLabel && (
+        <Typography variant="body2" color="text.secondary">
+          Refreshing for {runningDurationLabel}
+        </Typography>
+      )}
       {durationLabel && !loading && (
         <Typography variant="body2" color="text.secondary">
           took {durationLabel}
         </Typography>
       )}
-      {stalenessMinutes !== null && stalenessMinutes >= 5 && (
+      {!loading && stalenessMinutes !== null && stalenessMinutes >= 5 && (
         <Typography variant="body2" color="warning.main">
           Data is {stalenessMinutes} minutes old — Refresh?
         </Typography>

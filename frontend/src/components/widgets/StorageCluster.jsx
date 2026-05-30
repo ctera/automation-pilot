@@ -22,9 +22,12 @@ export default function StorageCluster() {
           <WidgetInfoTip text="Disk usage across all configured datastores. Shows aggregate cluster usage and per-datastore breakdown. Green < 70%, yellow 70-85%, red >= 85%." />
         </Typography>
         <Box sx={{ mb: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Aggregate: {clusterPercent.toFixed(1)}%
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="body2">Aggregate</Typography>
+            <Typography variant="body2" sx={{ color: barColor(clusterPercent) }}>
+              {clusterPercent.toFixed(1)}%
+            </Typography>
+          </Box>
           <LinearProgress
             variant="determinate"
             value={Math.min(clusterPercent, 100)}

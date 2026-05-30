@@ -3,7 +3,19 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 export default function WidgetInfoTip({ text }) {
   return (
-    <Tooltip title={text} arrow placement="top">
+    <Tooltip
+      title={text}
+      arrow
+      placement="top"
+      slotProps={{
+        tooltip: {
+          sx: {
+            fontSize: '0.875rem',
+            lineHeight: 1.4,
+          },
+        },
+      }}
+    >
       <Box
         component="span"
         sx={{

@@ -20,6 +20,7 @@ export function InfraProvider({ children }) {
   const [jenkinsJobs, setJenkinsJobs] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [refreshStartedAt, setRefreshStartedAt] = useState(null);
   const [refreshDurationMs, setRefreshDurationMs] = useState(null);
   const [error, setError] = useState(null);
   const startTimeRef = useRef(null);
@@ -32,6 +33,7 @@ export function InfraProvider({ children }) {
     }
     inFlightRef.current = true;
     setLastRefreshTs(now);
+    setRefreshStartedAt(now);
     startTimeRef.current = performance.now();
     setLoading(true);
     setError(null);
@@ -52,13 +54,23 @@ export function InfraProvider({ children }) {
     } finally {
       setRefreshDurationMs(Math.round(performance.now() - startTimeRef.current));
       setLoading(false);
+      setRefreshStartedAt(null);
       inFlightRef.current = false;
     }
   }, []);
 
   const value = useMemo(
-    () => ({ infraData, jenkinsJobs, lastRefresh, loading, refreshDurationMs, error, refresh }),
-    [infraData, jenkinsJobs, lastRefresh, loading, refreshDurationMs, error, refresh]
+    () => ({
+      infraData,
+      jenkinsJobs,
+      lastRefresh,
+      loading,
+      refreshStartedAt,
+      refreshDurationMs,
+      error,
+      refresh,
+    }),
+    [infraData, jenkinsJobs, lastRefresh, loading, refreshStartedAt, refreshDurationMs, error, refresh]
   );
 
   return <InfraContext.Provider value={value}>{children}</InfraContext.Provider>;

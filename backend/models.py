@@ -137,8 +137,19 @@ class ReprioritizeRequest(BaseModel):
     priority: Priority
 
 
+class JenkinsBuildStatus(BaseModel):
+    status: Optional[str] = None
+    is_building: bool = False
+    build_number: Optional[int] = None
+    duration_seconds: Optional[float] = None
+    estimated_duration_seconds: Optional[float] = None
+    build_url: Optional[str] = None
+    parameters: Optional[dict] = None
+
+
 class JenkinsJobStatus(BaseModel):
     job_name: str
+    status: Optional[str] = None
     is_building: bool = False
     build_number: Optional[int] = None
     duration_seconds: Optional[float] = None
@@ -146,4 +157,5 @@ class JenkinsJobStatus(BaseModel):
     job_url: Optional[str] = None
     build_url: Optional[str] = None
     parameters: Optional[dict] = None
+    running_builds: Optional[list[JenkinsBuildStatus]] = None
     error: Optional[str] = None
