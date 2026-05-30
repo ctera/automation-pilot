@@ -24,7 +24,7 @@ export default function InfraStatusBar() {
     setNowMs(Date.now());
     const timerId = setInterval(() => {
       setNowMs(Date.now());
-    }, 1000);
+    }, 100);
     return () => clearInterval(timerId);
   }, [loading]);
 
@@ -37,9 +37,7 @@ export default function InfraStatusBar() {
     : null;
 
   const runningDurationLabel = runningDurationMs != null
-    ? runningDurationMs >= 1000
-      ? `${Math.floor(runningDurationMs / 1000)}s`
-      : `${Math.round(runningDurationMs)}ms`
+    ? `${(runningDurationMs / 1000).toFixed(1)}s`
     : null;
 
   const durationLabel = refreshDurationMs != null
