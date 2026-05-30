@@ -3,6 +3,9 @@ import socket
 import sys
 
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def main():

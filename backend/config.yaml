@@ -3,7 +3,7 @@ server:
   host: "0.0.0.0"
 
 vmtools:
-  jar_path: "/opt/automation-pilot/VmTools.jar"
+  jar_path: "VmTools.jar"
   java_cmd: "java"
   timeout_seconds: 120
 
