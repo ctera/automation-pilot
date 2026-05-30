@@ -101,6 +101,9 @@ fi
 AFTER=$(git rev-parse HEAD)
 log "Pulled: ${BEFORE:0:8} -> ${AFTER:0:8}"
 
+# Git on Windows stores scripts as 644; restore execute bits after every pull
+chmod +x "$APP_DIR"/scripts/*.sh 2>/dev/null || true
+
 # ---------------------------------------------------------------------------
 # Phase 3: Conditional rebuild
 # ---------------------------------------------------------------------------
