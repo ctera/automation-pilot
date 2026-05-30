@@ -10,7 +10,7 @@ export default function WidgetInfoTip({ text }) {
       slotProps={{
         tooltip: {
           sx: {
-            fontSize: '0.875rem',
+            fontSize: '1rem',
             lineHeight: 1.4,
           },
         },
