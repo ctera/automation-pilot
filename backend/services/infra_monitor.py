@@ -50,23 +50,36 @@ class InfraMonitor:
 
     def count_vms_in_folder(self, folder: str, datacenter: str) -> int:
         result = self._run_vmtools("listVmsInFolder", folder, datacenter, ".+")
+        output = result.stdout + result.stderr
         count = 0
-        for line in result.stderr.splitlines():
-            if line.startswith("vm="):
+        for line in output.splitlines():
+            if "vm=" in line:
                 count += 1
         return count
+
+    @staticmethod
+    def _extract_json_array(text: str) -> Optional[list]:
+        """Extract a JSON array from VmTools output that mixes log lines with JSON."""
+        for line in reversed(text.splitlines()):
+            stripped = line.strip()
+            if stripped.startswith("["):
+                try:
+                    return json.loads(stripped)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+        return None
 
     def get_folder_vm_states(self, folder: str, datacenter: str) -> FolderVmCount:
         """Get per-VM power state for all VMs in a folder using getVmState."""
         result = self._run_vmtools("getVmState", "--folder", folder, datacenter, ".+")
-        try:
-            vms = json.loads(result.stdout.strip())
+        output = result.stdout + result.stderr
+        vms = self._extract_json_array(output)
+        if vms is not None:
             total = len(vms)
             powered_on = sum(1 for vm in vms if vm.get("powerState") == "poweredOn")
             return FolderVmCount(folder=folder, count=total, powered_on=powered_on)
-        except (json.JSONDecodeError, ValueError):
-            count = self.count_vms_in_folder(folder, datacenter)
-            return FolderVmCount(folder=folder, count=count, powered_on=0)
+        count = self.count_vms_in_folder(folder, datacenter)
+        return FolderVmCount(folder=folder, count=count, powered_on=0)
 
     def get_all_datastores(self, datastores: list[str], host: str) -> list[DatastoreStatus]:
         results = []
