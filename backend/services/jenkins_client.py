@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Optional
 
 import requests
@@ -188,13 +189,12 @@ class JenkinsClient:
         }
 
     def get_monitored_job_statuses(self, job_names: list[str]) -> list[dict]:
-        """Fetch status for all monitored jobs."""
-        results = []
-        for name in job_names:
+        """Fetch status for all monitored jobs in parallel."""
+        def _safe_get(name: str) -> dict:
             try:
-                results.append(self.get_job_status(name))
+                return self.get_job_status(name)
             except Exception as exc:
-                results.append({
+                return {
                     "job_name": name,
                     "status": "error",
                     "is_building": False,
@@ -206,5 +206,11 @@ class JenkinsClient:
                     "parameters": None,
                     "running_builds": None,
                     "error": str(exc),
-                })
+                }
+
+        with ThreadPoolExecutor(max_workers=len(job_names) or 1) as pool:
+            futures = {pool.submit(_safe_get, name): idx for idx, name in enumerate(job_names)}
+            results = [None] * len(job_names)
+            for future in as_completed(futures):
+                results[futures[future]] = future.result()
         return results

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Card, CardContent, Typography, Box, IconButton, Chip,
   Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
@@ -7,7 +7,8 @@ import {
 import CancelIcon from '@mui/icons-material/Cancel';
 import StopIcon from '@mui/icons-material/Stop';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
-import { getIntents, cancelIntent, stopIntent, reprioritizeIntent } from '../../services/api';
+import { cancelIntent, stopIntent, reprioritizeIntent } from '../../services/api';
+import { useIntents } from '../../context/IntentsContext';
 import WidgetInfoTip from '../WidgetInfoTip';
 
 const statusColors = {
@@ -24,29 +25,17 @@ const statusColors = {
 };
 
 export default function IntentQueue() {
-  const [intents, setIntents] = useState([]);
+  const { intents: allIntents, reload } = useIntents();
   const [stopDialog, setStopDialog] = useState(null);
   const [deleteVms, setDeleteVms] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const resp = await getIntents();
-      const active = resp.data.filter(
-        (i) => !['completed', 'failed', 'cancelled', 'stopped'].includes(i.status)
-      );
-      setIntents(active);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 10000);
-    return () => clearInterval(interval);
-  }, [load]);
+  const intents = allIntents.filter(
+    (i) => !['completed', 'failed', 'cancelled', 'stopped'].includes(i.status)
+  );
 
   const handleCancel = async (id) => {
     await cancelIntent(id);
-    load();
+    reload();
   };
 
   const handleStop = async () => {
@@ -54,13 +43,13 @@ export default function IntentQueue() {
       await stopIntent(stopDialog, deleteVms);
       setStopDialog(null);
       setDeleteVms(false);
-      load();
+      reload();
     }
   };
 
   const handleReprioritize = async (id, newPriority) => {
     await reprioritizeIntent(id, newPriority);
-    load();
+    reload();
   };
 
   return (

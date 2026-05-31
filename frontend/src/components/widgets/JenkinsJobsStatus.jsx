@@ -1,5 +1,5 @@
 import {
-  Card, CardContent, Typography, Chip, Tooltip, Link,
+  Card, CardContent, Typography, Chip, Tooltip, Link, Skeleton,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box,
 } from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -93,8 +93,27 @@ function DetailsCell({ params }) {
 }
 
 export default function JenkinsJobsStatus() {
-  const { jenkinsJobs } = useInfra();
+  const { jenkinsJobs, loading } = useInfra();
   const groups = getJobGroups(jenkinsJobs || []);
+
+  if (!jenkinsJobs && loading) {
+    return (
+      <Card>
+        <CardContent sx={{ pb: '12px !important' }}>
+          <Typography variant="h6" gutterBottom>
+            Jenkins Jobs
+            <WidgetInfoTip text="Real-time build status of monitored Jenkins jobs. Shows which jobs are currently building, their parameters, duration, and links. Configure the job list in Settings." />
+          </Typography>
+          <Box>
+            <Skeleton variant="rectangular" height={32} sx={{ mb: 1 }} />
+            <Skeleton variant="rectangular" height={32} sx={{ mb: 1 }} />
+            <Skeleton variant="rectangular" height={32} sx={{ mb: 1 }} />
+            <Skeleton variant="rectangular" height={32} />
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!jenkinsJobs || jenkinsJobs.length === 0) {
     return (

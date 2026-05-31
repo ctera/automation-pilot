@@ -21,10 +21,14 @@ def init_infrastructure(infra_monitor, db):
     _db = db
 
 
-@router.post("/infrastructure/refresh")
-async def refresh_infrastructure():
+def _ensure_initialized():
     if _infra_monitor is None or _db is None:
         raise HTTPException(503, "Service not initialized")
+
+
+@router.post("/infrastructure/refresh")
+async def refresh_infrastructure():
+    _ensure_initialized()
 
     datastores = get_datastores(_db)
     ds_host = get_datastore_host(_db)
@@ -45,6 +49,53 @@ async def refresh_infrastructure():
 
     save_infra_snapshot(_db, snapshot.model_dump(mode="json"))
     return snapshot.model_dump(mode="json")
+
+
+@router.post("/infrastructure/refresh/datastores")
+async def refresh_datastores():
+    _ensure_initialized()
+
+    datastores = get_datastores(_db)
+    ds_host = get_datastore_host(_db)
+
+    ds_statuses = await asyncio.to_thread(
+        _infra_monitor.get_all_datastores, datastores, ds_host
+    )
+
+    cluster_usage = _infra_monitor.calculate_cluster_usage(ds_statuses)
+
+    return {
+        "datastores": [ds.model_dump(mode="json") for ds in ds_statuses],
+        "cluster_usage_percent": round(cluster_usage, 1),
+    }
+
+
+@router.post("/infrastructure/refresh/hosts")
+async def refresh_hosts():
+    _ensure_initialized()
+
+    hosts = get_hosts(_db)
+    host_statuses = await asyncio.to_thread(_infra_monitor.get_all_hosts, hosts)
+
+    return {
+        "hosts": [h.model_dump(mode="json") for h in host_statuses],
+    }
+
+
+@router.post("/infrastructure/refresh/vm-folders")
+async def refresh_vm_folders():
+    _ensure_initialized()
+
+    folders = get_vm_folders(_db)
+    dc = get_datacenter(_db)
+
+    vm_counts = await asyncio.to_thread(
+        _infra_monitor.get_all_vm_counts, folders, dc
+    )
+
+    return {
+        "vm_counts": [vc.model_dump(mode="json") for vc in vm_counts],
+    }
 
 
 @router.get("/infrastructure/status")

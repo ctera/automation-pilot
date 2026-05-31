@@ -1,27 +1,13 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, Typography, Box, Chip, CircularProgress } from '@mui/material';
-import { getIntents } from '../../services/api';
+import { useIntents } from '../../context/IntentsContext';
 import WidgetInfoTip from '../WidgetInfoTip';
 
 export default function ActiveJobs() {
-  const [intents, setIntents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { intents: allIntents, loading } = useIntents();
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const resp = await getIntents();
-        const running = resp.data.filter(
-          (i) => i.status === 'running' || i.status === 'triggering'
-        );
-        setIntents(running);
-      } catch { /* ignore */ }
-      setLoading(false);
-    };
-    load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const intents = allIntents.filter(
+    (i) => i.status === 'running' || i.status === 'triggering'
+  );
 
   return (
     <Card>

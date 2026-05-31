@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from './theme';
 import { InfraProvider } from './context/InfraContext';
+import { IntentsProvider } from './context/IntentsContext';
 import AppLayout from './components/AppLayout';
 import Dashboard from './pages/Dashboard';
 import DecisionLog from './pages/DecisionLog';
@@ -12,14 +13,16 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <InfraProvider>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="decisions" element={<DecisionLog />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
+        <IntentsProvider>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="decisions" element={<DecisionLog />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </IntentsProvider>
       </InfraProvider>
     </ThemeProvider>
   );

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 from backend.models import (
@@ -88,30 +89,45 @@ class InfraMonitor:
         return FolderVmCount(folder=folder, count=count, powered_on=0)
 
     def get_all_datastores(self, datastores: list[str], host: str) -> list[DatastoreStatus]:
-        results = []
-        for ds in datastores:
+        def _fetch(ds: str) -> DatastoreStatus:
             try:
-                results.append(self.get_datastore_usage(ds, host))
+                return self.get_datastore_usage(ds, host)
             except RuntimeError:
-                results.append(DatastoreStatus(name=ds, usage_percent=-1))
+                return DatastoreStatus(name=ds, usage_percent=-1)
+
+        with ThreadPoolExecutor(max_workers=len(datastores) or 1) as pool:
+            futures = {pool.submit(_fetch, ds): idx for idx, ds in enumerate(datastores)}
+            results = [None] * len(datastores)
+            for future in as_completed(futures):
+                results[futures[future]] = future.result()
         return results
 
     def get_all_hosts(self, hosts: list[str]) -> list[HostStatus]:
-        results = []
-        for h in hosts:
+        def _fetch(h: str) -> HostStatus:
             try:
-                results.append(self.get_host_info(h))
+                return self.get_host_info(h)
             except RuntimeError:
-                results.append(HostStatus(ip=h, cpu_percent=-1, memory_percent=-1))
+                return HostStatus(ip=h, cpu_percent=-1, memory_percent=-1)
+
+        with ThreadPoolExecutor(max_workers=len(hosts) or 1) as pool:
+            futures = {pool.submit(_fetch, h): idx for idx, h in enumerate(hosts)}
+            results = [None] * len(hosts)
+            for future in as_completed(futures):
+                results[futures[future]] = future.result()
         return results
 
     def get_all_vm_counts(self, folders: list[str], datacenter: str) -> list[FolderVmCount]:
-        results = []
-        for folder in folders:
+        def _fetch(folder: str) -> FolderVmCount:
             try:
-                results.append(self.get_folder_vm_states(folder, datacenter))
+                return self.get_folder_vm_states(folder, datacenter)
             except (RuntimeError, subprocess.TimeoutExpired):
-                results.append(FolderVmCount(folder=folder, count=-1, powered_on=0))
+                return FolderVmCount(folder=folder, count=-1, powered_on=0)
+
+        with ThreadPoolExecutor(max_workers=len(folders) or 1) as pool:
+            futures = {pool.submit(_fetch, f): idx for idx, f in enumerate(folders)}
+            results = [None] * len(folders)
+            for future in as_completed(futures):
+                results[futures[future]] = future.result()
         return results
 
     @staticmethod
@@ -156,9 +172,13 @@ class InfraMonitor:
         datacenter: str,
         thresholds: dict,
     ) -> InfraSnapshot:
-        ds_statuses = self.get_all_datastores(datastores, datastore_host)
-        host_statuses = self.get_all_hosts(hosts)
-        vm_counts = self.get_all_vm_counts(vm_folders, datacenter)
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            ds_future = pool.submit(self.get_all_datastores, datastores, datastore_host)
+            host_future = pool.submit(self.get_all_hosts, hosts)
+            vm_future = pool.submit(self.get_all_vm_counts, vm_folders, datacenter)
+            ds_statuses = ds_future.result()
+            host_statuses = host_future.result()
+            vm_counts = vm_future.result()
 
         cluster_usage = self.calculate_cluster_usage(ds_statuses)
         max_cpu = max((h.cpu_percent for h in host_statuses if h.cpu_percent >= 0), default=0)

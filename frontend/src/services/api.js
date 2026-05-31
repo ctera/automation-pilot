@@ -6,6 +6,9 @@ const api = axios.create({
 });
 
 export const refreshInfra = () => api.post('/infrastructure/refresh');
+export const refreshDatastores = () => api.post('/infrastructure/refresh/datastores');
+export const refreshHosts = () => api.post('/infrastructure/refresh/hosts');
+export const refreshVmFolders = () => api.post('/infrastructure/refresh/vm-folders');
 export const getInfraStatus = () => api.get('/infrastructure/status');
 export const getIntents = () => api.get('/intents');
 export const cancelIntent = (id) => api.post(`/intents/${id}/cancel`);
