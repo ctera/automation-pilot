@@ -7,7 +7,7 @@ import { useInfra } from '../../context/InfraContext';
 import WidgetInfoTip from '../WidgetInfoTip';
 
 const STATUS_META = {
-  running: { label: 'Running', color: 'success', variant: 'filled' },
+  running: { label: 'Running', color: 'info', variant: 'filled' },
   success: { label: 'Success', color: 'success', variant: 'filled' },
   failure: { label: 'Failed', color: 'error', variant: 'filled' },
   unstable: { label: 'Unstable', color: 'warning', variant: 'filled' },
@@ -35,14 +35,14 @@ function getStatusMeta(job) {
   };
 }
 
-function getTableRows(jenkinsJobs) {
-  return jenkinsJobs.flatMap((job) => {
+function getJobGroups(jenkinsJobs) {
+  return jenkinsJobs.map((job) => {
     const runningBuilds = Array.isArray(job.running_builds) ? job.running_builds : [];
     if (runningBuilds.length === 0) {
-      return [{ ...job, rowKey: `${job.job_name}-latest` }];
+      return { job, builds: [{ ...job, rowKey: `${job.job_name}-latest` }] };
     }
 
-    return runningBuilds.map((runningBuild, index) => ({
+    const builds = runningBuilds.map((runningBuild, index) => ({
       ...job,
       ...runningBuild,
       status: runningBuild.status || job.status,
@@ -51,8 +51,10 @@ function getTableRows(jenkinsJobs) {
       build_url: runningBuild.build_url || job.build_url,
       duration_seconds: runningBuild.duration_seconds ?? job.duration_seconds,
       parameters: runningBuild.parameters || job.parameters,
-      rowKey: `${job.job_name}-${runningBuild.build_number ?? index}`,
+      rowKey: `${job.job_name}-running-${runningBuild.build_number ?? index}`,
     }));
+
+    return { job, builds };
   });
 }
 
@@ -82,7 +84,7 @@ function DetailsCell({ params }) {
           size="small"
           color={togglesValue === 'true' ? 'info' : 'default'}
           variant="outlined"
-          sx={{ width: 'fit-content' }}
+          sx={{ width: 'fit-content', height: 18, fontSize: '0.675rem', '& .MuiChip-label': { px: 0.75 } }}
         />
       )}
       {!image && !upgrade && !hasToggles && '--'}
@@ -92,7 +94,7 @@ function DetailsCell({ params }) {
 
 export default function JenkinsJobsStatus() {
   const { jenkinsJobs } = useInfra();
-  const rows = getTableRows(jenkinsJobs || []);
+  const groups = getJobGroups(jenkinsJobs || []);
 
   if (!jenkinsJobs || jenkinsJobs.length === 0) {
     return (
@@ -124,71 +126,82 @@ export default function JenkinsJobsStatus() {
                 <TableCell>Job</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Details</TableCell>
-                <TableCell>Last Build</TableCell>
+                <TableCell>Build</TableCell>
                 <TableCell>Duration</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row) => {
-                const statusMeta = getStatusMeta(row);
-                return (
-                <TableRow key={row.rowKey}>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      {row.job_url ? (
-                        <Link
-                          href={row.job_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          underline="hover"
-                          variant="body2"
+              {groups.map(({ job, builds }, groupIdx) =>
+                builds.map((row, buildIdx) => {
+                  const statusMeta = getStatusMeta(row);
+                  const isFirstRow = buildIdx === 0;
+                  const groupBorder = groupIdx > 0 && isFirstRow
+                    ? { borderTop: '2px solid', borderColor: 'divider' }
+                    : undefined;
+                  return (
+                    <TableRow key={row.rowKey} sx={groupBorder}>
+                      {isFirstRow && (
+                        <TableCell
+                          rowSpan={builds.length}
+                          sx={{ verticalAlign: 'top', pt: 1.25 }}
                         >
-                          {row.job_name}
-                        </Link>
-                      ) : (
-                        <Typography variant="body2">{row.job_name}</Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {job.job_url ? (
+                              <Link
+                                href={job.job_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                underline="hover"
+                                variant="body2"
+                              >
+                                {job.job_name}
+                              </Link>
+                            ) : (
+                              <Typography variant="body2">{job.job_name}</Typography>
+                            )}
+                            {job.error && (
+                              <Tooltip title={job.error}>
+                                <WarningAmberIcon fontSize="small" color="warning" />
+                              </Tooltip>
+                            )}
+                          </Box>
+                        </TableCell>
                       )}
-                      {row.error && (
-                        <Tooltip title={row.error}>
-                          <WarningAmberIcon fontSize="small" color="warning" />
-                        </Tooltip>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={statusMeta.label}
-                      size="small"
-                      color={statusMeta.color}
-                      variant={statusMeta.variant}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <DetailsCell params={row.parameters} />
-                  </TableCell>
-                  <TableCell>
-                    {row.build_number ? (
-                      row.build_url ? (
-                        <Link
-                          href={row.build_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          underline="hover"
-                          variant="body2"
-                        >
-                          #{row.build_number}
-                        </Link>
-                      ) : (
-                        `#${row.build_number}`
-                      )
-                    ) : '--'}
-                  </TableCell>
-                  <TableCell>
-                    {formatDuration(row.duration_seconds)}
-                  </TableCell>
-                </TableRow>
-                );
-              })}
+                      <TableCell>
+                        <Chip
+                          label={statusMeta.label}
+                          size="small"
+                          color={statusMeta.color}
+                          variant={statusMeta.variant}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <DetailsCell params={row.parameters} />
+                      </TableCell>
+                      <TableCell>
+                        {row.build_number ? (
+                          row.build_url ? (
+                            <Link
+                              href={row.build_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="hover"
+                              variant="body2"
+                            >
+                              #{row.build_number}
+                            </Link>
+                          ) : (
+                            `#${row.build_number}`
+                          )
+                        ) : '--'}
+                      </TableCell>
+                      <TableCell>
+                        {formatDuration(row.duration_seconds)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </TableContainer>

@@ -48,8 +48,14 @@ class InfraMonitor:
             memory_percent=int(mem_match.group(1)),
         )
 
+    @staticmethod
+    def _normalize_folder(folder: str) -> str:
+        """Strip leading slashes — VmTools splits the path by '/' and a leading
+        slash produces an empty first segment which fails the vCenter lookup."""
+        return folder.lstrip("/")
+
     def count_vms_in_folder(self, folder: str, datacenter: str) -> int:
-        result = self._run_vmtools("listVmsInFolder", folder, datacenter, ".+")
+        result = self._run_vmtools("listVmsInFolder", self._normalize_folder(folder), datacenter, ".+")
         output = result.stdout + result.stderr
         count = 0
         for line in output.splitlines():
@@ -71,7 +77,7 @@ class InfraMonitor:
 
     def get_folder_vm_states(self, folder: str, datacenter: str) -> FolderVmCount:
         """Get per-VM power state for all VMs in a folder using getVmState."""
-        result = self._run_vmtools("getVmState", "--folder", folder, datacenter, ".+")
+        result = self._run_vmtools("getVmState", "--folder", self._normalize_folder(folder), datacenter, ".+")
         output = result.stdout + result.stderr
         vms = self._extract_json_array(output)
         if vms is not None:

@@ -130,11 +130,11 @@ class JenkinsClient:
         }
 
     def get_job_status(self, job_name: str) -> dict:
-        """Fetch current build status for a single job."""
+        """Fetch current build status for a single job including all running builds."""
         url = self._url(f"job/{job_name}/api/json")
         params = {
-            "tree": "name,displayName,lastBuild[number,building,timestamp,duration,"
-                    "estimatedDuration,result,url,actions[parameters[name,value]]]"
+            "tree": "name,displayName,builds[number,building,timestamp,duration,"
+                    "estimatedDuration,result,url,actions[parameters[name,value]]]{0,10}"
         }
         resp = requests.get(url, auth=self._auth, params=params, timeout=15)
         resp.raise_for_status()
@@ -142,8 +142,8 @@ class JenkinsClient:
 
         job_url = f"{self._base}/job/{job_name}/"
 
-        last_build = data.get("lastBuild")
-        if not last_build:
+        builds = data.get("builds") or []
+        if not builds:
             return {
                 "job_name": job_name,
                 "status": "never_built",
@@ -154,13 +154,22 @@ class JenkinsClient:
                 "job_url": job_url,
                 "build_url": None,
                 "parameters": None,
+                "running_builds": None,
             }
 
-        return {
+        last_build = builds[0]
+        running_builds = [
+            self._build_status_payload(b) for b in builds if b.get("building", False)
+        ]
+
+        result = {
             "job_name": job_name,
             "job_url": job_url,
             **self._build_status_payload(last_build),
         }
+        if running_builds:
+            result["running_builds"] = running_builds
+        return result
 
     def _running_build_numbers_by_job(self, job_names: list[str]) -> dict[str, list[int]]:
         monitored = set(job_names)
@@ -180,32 +189,10 @@ class JenkinsClient:
 
     def get_monitored_job_statuses(self, job_names: list[str]) -> list[dict]:
         """Fetch status for all monitored jobs."""
-        try:
-            running_by_job = self._running_build_numbers_by_job(job_names)
-        except Exception as exc:
-            logger.warning("Failed collecting running build list: %s", exc)
-            running_by_job = {}
-
         results = []
         for name in job_names:
             try:
-                job_status = self.get_job_status(name)
-
-                running_builds = []
-                for build_number in running_by_job.get(name, []):
-                    try:
-                        build_data = self.get_build_status(name, build_number)
-                    except Exception as exc:
-                        logger.warning("Failed to fetch %s #%d details: %s", name, build_number, exc)
-                        continue
-                    if not build_data or not build_data.get("building", False):
-                        continue
-                    running_builds.append(self._build_status_payload(build_data))
-
-                if running_builds:
-                    job_status["running_builds"] = running_builds
-
-                results.append(job_status)
+                results.append(self.get_job_status(name))
             except Exception as exc:
                 results.append({
                     "job_name": name,

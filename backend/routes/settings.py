@@ -57,5 +57,8 @@ async def update_setting(key: str, body: SettingUpdate):
         raise HTTPException(503, "Service not initialized")
     if key not in ALLOWED_KEYS:
         raise HTTPException(400, f"Unknown setting: {key}. Allowed: {sorted(ALLOWED_KEYS)}")
-    set_setting(_db, key, body.value)
-    return {"key": key, "value": body.value}
+    value = body.value
+    if key == "vm_folders" and isinstance(value, list):
+        value = [v.strip().lstrip("/") for v in value if isinstance(v, str)]
+    set_setting(_db, key, value)
+    return {"key": key, "value": value}
