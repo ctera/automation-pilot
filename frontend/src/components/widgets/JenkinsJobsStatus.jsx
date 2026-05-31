@@ -143,6 +143,7 @@ export default function JenkinsJobsStatus() {
             <TableHead>
               <TableRow>
                 <TableCell>Job</TableCell>
+                <TableCell>Team</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Details</TableCell>
                 <TableCell>Build</TableCell>
@@ -208,6 +209,21 @@ export default function JenkinsJobsStatus() {
                               </Tooltip>
                             )}
                           </Box>
+                        </TableCell>
+                      )}
+                      {isFirstRow && (
+                        <TableCell
+                          rowSpan={builds.length}
+                          sx={{ verticalAlign: 'middle' }}
+                        >
+                          {job.team && (
+                            <Chip
+                              label={job.team}
+                              size="small"
+                              color={job.team === 'Portal' ? 'primary' : job.team === 'CloudFS' ? 'success' : 'warning'}
+                              variant="outlined"
+                            />
+                          )}
                         </TableCell>
                       )}
                       <TableCell>

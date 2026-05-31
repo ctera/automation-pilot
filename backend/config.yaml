@@ -13,13 +13,24 @@ jenkins:
   cleanup_job_name: "TBD_CLEANUP_JOB"
 
 monitored_jenkins_jobs:
-  - PIM_automation_dispatcher
-  - Run_All_Portal_Test_Suites
-  - deploy_and_run_smoke
-  - deploy_and_run_smoke_win11
-  - PIM_sanity_ESXI
-  - PIM_sanity_KVM
-  - PIM_sanity_AWS
+  - name: PIM_automation_dispatcher
+    team: Portal
+  - name: Run_All_Portal_Test_Suites
+    team: Portal
+  - name: deploy_and_run_smoke
+    team: Portal
+  - name: deploy_and_run_smoke_win11
+    team: Portal
+  - name: PIM_sanity_ESXI
+    team: Portal
+  - name: PIM_sanity_KVM
+    team: Portal
+  - name: PIM_sanity_AWS
+    team: Portal
+  - name: insight_2_sanity
+    team: Portal
+  - name: insight_2_sanity_tmp
+    team: Portal
 
 thresholds:
   storage:

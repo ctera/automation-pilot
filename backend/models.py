@@ -113,6 +113,17 @@ class InfraSnapshot(BaseModel):
     vm_counts: list[FolderVmCount]
 
 
+class Team(str, Enum):
+    PORTAL = "Portal"
+    CLOUDFS = "CloudFS"
+    GATEWAY = "Gateway"
+
+
+class MonitoredJob(BaseModel):
+    name: str
+    team: Team
+
+
 class JobDefinition(BaseModel):
     id: str
     name: str
@@ -149,6 +160,7 @@ class JenkinsBuildStatus(BaseModel):
 
 class JenkinsJobStatus(BaseModel):
     job_name: str
+    team: Optional[str] = None
     status: Optional[str] = None
     is_building: bool = False
     build_number: Optional[int] = None

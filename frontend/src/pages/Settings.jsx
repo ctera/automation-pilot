@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Card, CardContent, TextField, Button,
   IconButton, List, ListItem, ListItemText,
-  CircularProgress, Alert, Grid,
+  CircularProgress, Alert, Grid, Chip, MenuItem, Select, FormControl, InputLabel,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -113,6 +113,109 @@ function ThresholdEditor({ thresholds, onSave }) {
   );
 }
 
+const TEAMS = ['Portal', 'CloudFS', 'Gateway'];
+
+const TEAM_COLORS = {
+  Portal: 'primary',
+  CloudFS: 'success',
+  Gateway: 'warning',
+};
+
+function JobListEditor({ items, onSave }) {
+  const [localItems, setLocalItems] = useState(items || []);
+  const [newName, setNewName] = useState('');
+  const [newTeam, setNewTeam] = useState('');
+  const [teamError, setTeamError] = useState(false);
+
+  useEffect(() => { setLocalItems(items || []); }, [items]);
+
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    if (!newTeam) {
+      setTeamError(true);
+      return;
+    }
+    setLocalItems([...localItems, { name: newName.trim(), team: newTeam }]);
+    setNewName('');
+    setNewTeam('');
+    setTeamError(false);
+  };
+
+  const handleRemove = (index) => {
+    setLocalItems(localItems.filter((_, i) => i !== index));
+  };
+
+  return (
+    <Card sx={{ mb: 2 }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Monitored Jenkins Jobs</Typography>
+        <List dense>
+          {localItems.map((item, i) => (
+            <ListItem
+              key={i}
+              secondaryAction={
+                <IconButton edge="end" onClick={() => handleRemove(i)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              }
+            >
+              <ListItemText
+                primary={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2">{item.name}</Typography>
+                    <Chip
+                      label={item.team}
+                      size="small"
+                      color={TEAM_COLORS[item.team] || 'default'}
+                      variant="outlined"
+                    />
+                  </Box>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
+        <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'flex-start' }}>
+          <TextField
+            size="small"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Jenkins job name"
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            sx={{ flex: 1 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 140 }} error={teamError}>
+            <InputLabel>Team *</InputLabel>
+            <Select
+              value={newTeam}
+              label="Team *"
+              onChange={(e) => { setNewTeam(e.target.value); setTeamError(false); }}
+            >
+              {TEAMS.map((t) => (
+                <MenuItem key={t} value={t}>{t}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <IconButton onClick={handleAdd}><AddIcon /></IconButton>
+        </Box>
+        {teamError && (
+          <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+            Team is required
+          </Typography>
+        )}
+        <Button
+          variant="contained"
+          size="small"
+          sx={{ mt: 1 }}
+          onClick={() => onSave('monitored_jenkins_jobs', localItems)}
+        >
+          Save
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Settings() {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -150,7 +253,7 @@ export default function Settings() {
           <EditableList title="ESXi Hosts" items={settings.hosts} settingKey="hosts" onSave={handleSave} />
           <EditableList title="Datastores" items={settings.datastores} settingKey="datastores" onSave={handleSave} />
           <EditableList title="VM Folders" items={settings.vm_folders} settingKey="vm_folders" onSave={handleSave} />
-          <EditableList title="Monitored Jenkins Jobs" items={settings.monitored_jenkins_jobs} settingKey="monitored_jenkins_jobs" onSave={handleSave} />
+          <JobListEditor items={settings.monitored_jenkins_jobs} onSave={handleSave} />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <ThresholdEditor thresholds={settings.thresholds} onSave={handleSave} />

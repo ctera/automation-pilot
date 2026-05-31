@@ -96,5 +96,12 @@ def get_deployment_window(conn: sqlite3.Connection) -> int:
     return val if val is not None else 30
 
 
-def get_monitored_jenkins_jobs(conn: sqlite3.Connection) -> list[str]:
-    return _get_json_setting(conn, "monitored_jenkins_jobs") or []
+def get_monitored_jenkins_jobs(conn: sqlite3.Connection) -> list[dict]:
+    raw = _get_json_setting(conn, "monitored_jenkins_jobs") or []
+    normalized = []
+    for item in raw:
+        if isinstance(item, str):
+            normalized.append({"name": item, "team": "Portal"})
+        elif isinstance(item, dict) and "name" in item:
+            normalized.append(item)
+    return normalized
