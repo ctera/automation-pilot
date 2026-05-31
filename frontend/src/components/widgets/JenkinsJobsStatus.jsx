@@ -120,7 +120,7 @@ export default function JenkinsJobsStatus() {
           <WidgetInfoTip text="Real-time build status of monitored Jenkins jobs. Shows which jobs are currently building, their parameters, duration, and links. Configure the job list in Settings." />
         </Typography>
         <TableContainer>
-          <Table size="small">
+          <Table size="small" sx={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
             <TableHead>
               <TableRow>
                 <TableCell>Job</TableCell>
@@ -131,19 +131,43 @@ export default function JenkinsJobsStatus() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {groups.map(({ job, builds }, groupIdx) =>
+              {groups.map(({ job, builds }) =>
                 builds.map((row, buildIdx) => {
                   const statusMeta = getStatusMeta(row);
                   const isFirstRow = buildIdx === 0;
-                  const groupBorder = groupIdx > 0 && isFirstRow
-                    ? { borderTop: '2px solid', borderColor: 'divider' }
-                    : undefined;
+                  const isLastRow = buildIdx === builds.length - 1;
+                  const borderColor = 'rgba(255,255,255,0.08)';
                   return (
-                    <TableRow key={row.rowKey} sx={groupBorder}>
+                    <TableRow
+                      key={row.rowKey}
+                      sx={{
+                        '& > td': {
+                          backgroundColor: 'action.hover',
+                          borderTop: isFirstRow ? `1px solid ${borderColor}` : 'none',
+                          borderBottom: isLastRow ? `1px solid ${borderColor}` : 'none',
+                          py: 0.75,
+                        },
+                        '& > td:last-child': {
+                          borderRight: `1px solid ${borderColor}`,
+                          borderTopRightRadius: isFirstRow ? 6 : 0,
+                          borderBottomRightRadius: isLastRow ? 6 : 0,
+                        },
+                      }}
+                    >
                       {isFirstRow && (
                         <TableCell
                           rowSpan={builds.length}
-                          sx={{ verticalAlign: 'top', pt: 1.25 }}
+                          sx={{
+                            verticalAlign: 'middle',
+                            borderLeft: '3px solid',
+                            borderLeftColor: 'primary.main',
+                            borderTop: `1px solid ${borderColor}`,
+                            borderBottom: `1px solid ${borderColor}`,
+                            borderTopLeftRadius: 6,
+                            borderBottomLeftRadius: 6,
+                            backgroundColor: 'action.hover',
+                            px: 1.5,
+                          }}
                         >
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             {job.job_url ? (
