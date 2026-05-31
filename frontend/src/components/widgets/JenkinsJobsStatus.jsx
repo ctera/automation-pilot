@@ -139,7 +139,7 @@ export default function JenkinsJobsStatus() {
           <WidgetInfoTip text="Real-time build status of monitored Jenkins jobs. Shows which jobs are currently building, their parameters, duration, and links. Configure the job list in Settings." />
         </Typography>
         <TableContainer>
-          <Table size="small" sx={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+          <Table size="small" sx={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <TableHead>
               <TableRow>
                 <TableCell>Job</TableCell>
@@ -151,8 +151,8 @@ export default function JenkinsJobsStatus() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {groups.map(({ job, builds }) =>
-                builds.map((row, buildIdx) => {
+              {groups.map(({ job, builds }, groupIdx) => {
+                const rows = builds.map((row, buildIdx) => {
                   const statusMeta = getStatusMeta(row);
                   const isFirstRow = buildIdx === 0;
                   const isLastRow = buildIdx === builds.length - 1;
@@ -164,8 +164,8 @@ export default function JenkinsJobsStatus() {
                         '& > td': {
                           backgroundColor: 'action.hover',
                           borderTop: isFirstRow ? `1px solid ${borderColor}` : 'none',
-                          borderBottom: isLastRow ? `1px solid ${borderColor}` : 'none',
-                          py: 0.75,
+                          borderBottom: isLastRow ? `1px solid ${borderColor}` : `1px dashed rgba(255,255,255,0.04)`,
+                          py: isFirstRow || isLastRow ? 0.75 : 0.25,
                         },
                         '& > td:last-child': {
                           borderRight: `1px solid ${borderColor}`,
@@ -259,8 +259,18 @@ export default function JenkinsJobsStatus() {
                       </TableCell>
                     </TableRow>
                   );
-                })
-              )}
+                });
+
+                if (groupIdx > 0) {
+                  return [
+                    <TableRow key={`spacer-${groupIdx}`} sx={{ '& > td': { p: 0, border: 'none' } }}>
+                      <TableCell colSpan={6} sx={{ height: 12 }} />
+                    </TableRow>,
+                    ...rows,
+                  ];
+                }
+                return rows;
+              })}
             </TableBody>
           </Table>
         </TableContainer>
