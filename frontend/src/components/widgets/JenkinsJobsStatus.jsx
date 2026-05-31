@@ -1,10 +1,19 @@
+import { useState } from 'react';
 import {
   Card, CardContent, Typography, Chip, Tooltip, Link, Skeleton,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box, Button,
 } from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useInfra } from '../../context/InfraContext';
 import WidgetInfoTip from '../WidgetInfoTip';
+
+const ALL_TEAMS = ['Portal', 'CloudFS', 'Gateway'];
+
+const TEAM_COLORS = {
+  Portal: '#5C9DFF',
+  CloudFS: '#4ADE80',
+  Gateway: '#FBBF24',
+};
 
 const STATUS_META = {
   running: { label: 'Running', color: 'info', variant: 'filled' },
@@ -94,7 +103,24 @@ function DetailsCell({ params }) {
 
 export default function JenkinsJobsStatus() {
   const { jenkinsJobs, loading } = useInfra();
+  const [activeTeams, setActiveTeams] = useState(new Set(ALL_TEAMS));
   const groups = getJobGroups(jenkinsJobs || []);
+  const filteredGroups = groups.filter(({ job }) => activeTeams.has(job.team));
+
+  const toggleTeam = (team) => {
+    setActiveTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(team)) next.delete(team);
+      else next.add(team);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setActiveTeams((prev) =>
+      prev.size === ALL_TEAMS.length ? new Set() : new Set(ALL_TEAMS),
+    );
+  };
 
   if (!jenkinsJobs && loading) {
     return (
@@ -138,6 +164,64 @@ export default function JenkinsJobsStatus() {
           Jenkins Jobs
           <WidgetInfoTip text="Real-time build status of monitored Jenkins jobs. Shows which jobs are currently building, their parameters, duration, and links. Configure the job list in Settings." />
         </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+          <Typography variant="body1" color="text.secondary" sx={{ mr: 0.5, whiteSpace: 'nowrap', fontWeight: 500 }}>
+            Filter by team
+          </Typography>
+          {ALL_TEAMS.map((team) => {
+            const isActive = activeTeams.has(team);
+            const color = TEAM_COLORS[team];
+            return (
+              <Button
+                key={team}
+                size="small"
+                variant={isActive ? 'contained' : 'outlined'}
+                onClick={() => toggleTeam(team)}
+                sx={{
+                  minWidth: 'auto',
+                  px: 1.5,
+                  py: 0.25,
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  borderColor: color,
+                  color: isActive ? '#0F172A' : color,
+                  backgroundColor: isActive ? color : 'transparent',
+                  textShadow: isActive ? '0 0 1px rgba(0,0,0,0.3)' : 'none',
+                  '&:hover': {
+                    borderColor: color,
+                    backgroundColor: isActive ? color : `${color}22`,
+                  },
+                }}
+              >
+                {team}
+              </Button>
+            );
+          })}
+          <Box sx={{ width: '1px', height: 20, backgroundColor: 'divider', mx: 0.5 }} />
+          <Button
+            size="small"
+            variant={activeTeams.size === ALL_TEAMS.length ? 'contained' : 'outlined'}
+            onClick={toggleAll}
+            sx={{
+              minWidth: 'auto',
+              px: 1.5,
+              py: 0.25,
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              borderColor: 'rgba(148,163,184,0.4)',
+              color: activeTeams.size === ALL_TEAMS.length ? '#0F172A' : 'text.secondary',
+              backgroundColor: activeTeams.size === ALL_TEAMS.length ? 'rgba(148,163,184,0.5)' : 'transparent',
+              '&:hover': {
+                backgroundColor: 'rgba(148,163,184,0.15)',
+              },
+            }}
+          >
+            All Teams
+          </Button>
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          Displaying Jenkins Jobs of {activeTeams.size > 0 ? [...activeTeams].join(', ') : 'no teams'}
+        </Typography>
         <TableContainer>
           <Table size="small" sx={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <TableHead>
@@ -151,7 +235,7 @@ export default function JenkinsJobsStatus() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {groups.map(({ job, builds }, groupIdx) => {
+              {filteredGroups.map(({ job, builds }, groupIdx) => {
                 const rows = builds.map((row, buildIdx) => {
                   const statusMeta = getStatusMeta(row);
                   const isFirstRow = buildIdx === 0;
