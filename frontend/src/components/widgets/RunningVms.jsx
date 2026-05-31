@@ -31,7 +31,7 @@ export default function RunningVms() {
               <TableHead>
                 <TableRow>
                   <TableCell>Folder</TableCell>
-                  <TableCell align="right">Total</TableCell>
+                  <TableCell align="right">VMs</TableCell>
                   <TableCell align="right">Powered On</TableCell>
                 </TableRow>
               </TableHead>
@@ -53,6 +53,29 @@ export default function RunningVms() {
                     </TableRow>
                   );
                 })}
+                {vmList.length > 0 && (() => {
+                  const totalVms = vmList.reduce((sum, f) => sum + (f.count >= 0 ? f.count : 0), 0);
+                  const totalOn = vmList.reduce((sum, f) => sum + f.powered_on, 0);
+                  return (
+                    <TableRow sx={{
+                      '& td': {
+                        fontWeight: 'bold',
+                        fontSize: '0.925rem',
+                        borderBottom: 'none',
+                        pt: 1.5,
+                      },
+                    }}>
+                      <TableCell>All Folders</TableCell>
+                      <TableCell align="right">{totalVms}</TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{ color: totalOn > 0 ? 'success.main' : 'text.secondary' }}
+                      >
+                        {totalOn}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })()}
               </TableBody>
             </Table>
           </TableContainer>
