@@ -164,7 +164,7 @@ export default function JenkinsJobsStatus() {
           Jenkins Jobs
           <WidgetInfoTip text="Real-time build status of monitored Jenkins jobs. Shows which jobs are currently building, their parameters, duration, and links. Configure the job list in Settings." />
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, mb: 0.5 }}>
           <Typography variant="body1" color="text.secondary" sx={{ mr: 0.5, whiteSpace: 'nowrap', fontWeight: 500 }}>
             Filter by team
           </Typography>
