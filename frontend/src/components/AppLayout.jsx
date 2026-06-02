@@ -8,6 +8,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 
 function AppLogo() {
   return (
@@ -70,6 +71,7 @@ const DRAWER_WIDTH = 220;
 const navItems = [
   { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
   { label: 'Decision Log', path: '/decisions', icon: <ListAltIcon /> },
+  { label: 'Portal Triggers', path: '/triggers', icon: <ScheduleIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
 ];
 

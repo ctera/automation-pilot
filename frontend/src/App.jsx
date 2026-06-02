@@ -7,6 +7,7 @@ import AppLayout from './components/AppLayout';
 import Dashboard from './pages/Dashboard';
 import DecisionLog from './pages/DecisionLog';
 import Settings from './pages/Settings';
+import PortalTriggers from './pages/PortalTriggers';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="decisions" element={<DecisionLog />} />
+              <Route path="triggers" element={<PortalTriggers />} />
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

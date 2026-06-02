@@ -60,14 +60,45 @@ class JenkinsClient:
     def __init__(self, *, base_url: str, user: str, token: str):
         self._base = base_url.rstrip("/")
         self._auth = (user, token)
+        self._session = requests.Session()
+        self._session.auth = self._auth
+        self._crumb_header: Optional[tuple[str, str]] = None
 
     def _url(self, path: str) -> str:
         return f"{self._base}/{path.lstrip('/')}"
 
+    def _ensure_crumb(self) -> None:
+        if self._crumb_header is not None:
+            return
+        try:
+            resp = self._session.get(
+                self._url("crumbIssuer/api/json"), timeout=10,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                self._crumb_header = (data["crumbRequestField"], data["crumb"])
+        except Exception:
+            pass
+
+    def _post(self, url: str, **kwargs) -> requests.Response:
+        """POST with crumb header and session cookies."""
+        self._ensure_crumb()
+        headers = kwargs.pop("headers", {})
+        if self._crumb_header:
+            headers[self._crumb_header[0]] = self._crumb_header[1]
+        resp = self._session.post(url, headers=headers, **kwargs)
+        if resp.status_code == 403 and "crumb" in resp.text.lower():
+            self._crumb_header = None
+            self._ensure_crumb()
+            if self._crumb_header:
+                headers[self._crumb_header[0]] = self._crumb_header[1]
+                resp = self._session.post(url, headers=headers, **kwargs)
+        return resp
+
     def trigger_job(self, job_name: str, parameters: dict[str, Any]) -> str:
         url = self._url(f"job/{job_name}/buildWithParameters")
         try:
-            resp = requests.post(url, auth=self._auth, params=parameters, timeout=30)
+            resp = self._post(url, params=parameters, timeout=30)
             resp.raise_for_status()
         except Exception as exc:
             raise RuntimeError(f"Jenkins trigger for {job_name} failed: {exc}") from exc
@@ -76,14 +107,14 @@ class JenkinsClient:
     def stop_build(self, job_name: str, build_number: int) -> None:
         url = self._url(f"job/{job_name}/{build_number}/stop")
         try:
-            resp = requests.post(url, auth=self._auth, timeout=30)
+            resp = self._post(url, timeout=30)
             resp.raise_for_status()
         except Exception as exc:
             logger.warning("Failed to stop %s #%d: %s", job_name, build_number, exc)
 
     def get_build_status(self, job_name: str, build_number: int) -> Optional[dict]:
         url = self._url(f"job/{job_name}/{build_number}/api/json")
-        resp = requests.get(url, auth=self._auth, timeout=30)
+        resp = self._session.get(url, timeout=30)
         if resp.status_code == 404:
             return None
         resp.raise_for_status()
@@ -91,7 +122,7 @@ class JenkinsClient:
 
     def get_running_builds(self) -> list[dict]:
         url = self._url("computer/api/json?depth=2")
-        resp = requests.get(url, auth=self._auth, timeout=30)
+        resp = self._session.get(url, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         builds = []
@@ -137,7 +168,7 @@ class JenkinsClient:
             "tree": "name,displayName,builds[number,building,timestamp,duration,"
                     "estimatedDuration,result,url,actions[parameters[name,value]]]{0,10}"
         }
-        resp = requests.get(url, auth=self._auth, params=params, timeout=15)
+        resp = self._session.get(url, params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 
@@ -187,6 +218,43 @@ class JenkinsClient:
             for name, numbers in numbers_by_job.items()
             if numbers
         }
+
+    def enable_job(self, job_name: str) -> None:
+        url = self._url(f"job/{job_name}/enable")
+        resp = self._post(url, timeout=30, allow_redirects=False)
+        if resp.status_code not in (200, 302):
+            resp.raise_for_status()
+
+    def disable_job(self, job_name: str) -> None:
+        url = self._url(f"job/{job_name}/disable")
+        resp = self._post(url, timeout=30, allow_redirects=False)
+        if resp.status_code not in (200, 302):
+            resp.raise_for_status()
+
+    def get_job_config_xml(self, job_name: str) -> str:
+        url = self._url(f"job/{job_name}/config.xml")
+        resp = self._session.get(url, timeout=30, headers={"Cache-Control": "no-cache"})
+        resp.raise_for_status()
+        return resp.text
+
+    def update_job_config_xml(self, job_name: str, config_xml: str) -> None:
+        url = self._url(f"job/{job_name}/config.xml")
+        resp = self._post(
+            url, data=config_xml.encode("utf-8"),
+            headers={"Content-Type": "text/xml"}, timeout=30,
+            allow_redirects=False,
+        )
+        logger.info("config.xml POST %s -> %d", job_name, resp.status_code)
+        if resp.status_code not in (200, 302):
+            logger.error("config.xml POST failed: %s", resp.text[:500])
+            resp.raise_for_status()
+
+    def get_job_info(self, job_name: str) -> dict:
+        url = self._url(f"job/{job_name}/api/json")
+        params = {"tree": "name,buildable,description"}
+        resp = self._session.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        return resp.json()
 
     def get_monitored_job_statuses(self, job_names: list[str]) -> list[dict]:
         """Fetch status for all monitored jobs in parallel."""

@@ -23,4 +23,10 @@ export const updateSetting = (key, value) =>
 export const getJobs = () => api.get('/jobs');
 export const getJenkinsJobStatuses = () => api.get('/jenkins/job-statuses');
 
+export const getPortalTriggers = () => api.get('/portal-triggers');
+export const enableTriggerJob = (jobName) => api.post(`/portal-triggers/${jobName}/enable`);
+export const disableTriggerJob = (jobName) => api.post(`/portal-triggers/${jobName}/disable`);
+export const updateTriggerSchedule = (jobName, spec) =>
+  api.put(`/portal-triggers/${jobName}/schedule`, { spec });
+
 export default api;

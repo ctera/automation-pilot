@@ -158,6 +158,21 @@ class JenkinsBuildStatus(BaseModel):
     parameters: Optional[dict] = None
 
 
+class PortalTriggerJob(BaseModel):
+    job_name: str
+    description: str
+    job_url: str
+    config_url: str
+    enabled: bool
+    cron_spec: Optional[str] = None
+    last_run_message: Optional[str] = None
+    next_run_message: Optional[str] = None
+
+
+class ScheduleUpdateRequest(BaseModel):
+    spec: Optional[str] = None
+
+
 class JenkinsJobStatus(BaseModel):
     job_name: str
     team: Optional[str] = None
