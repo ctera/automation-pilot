@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Typography, CircularProgress, LinearProgress } from '@mui/material';
+import { Box, Button, Typography, CircularProgress, LinearProgress, Snackbar, Alert } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useInfra } from '../../context/InfraContext';
 import StatusBadge from '../StatusBadge';
@@ -8,32 +8,30 @@ import WidgetInfoTip from '../WidgetInfoTip';
 export default function InfraStatusBar() {
   const {
     infraData,
-    lastRefresh,
-    loading,
+    lastRefreshedAt,
+    isRefreshing,
     refreshStartedAt,
     refreshDurationMs,
     refreshProgress,
+    cooldownNotice,
+    dismissCooldownNotice,
     refresh,
   } = useInfra();
   const state = infraData?.state || 'unknown';
   const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
-    if (!loading) {
-      return undefined;
-    }
+    if (!isRefreshing) return undefined;
     setNowMs(Date.now());
-    const timerId = setInterval(() => {
-      setNowMs(Date.now());
-    }, 100);
+    const timerId = setInterval(() => setNowMs(Date.now()), 100);
     return () => clearInterval(timerId);
-  }, [loading]);
+  }, [isRefreshing]);
 
-  const stalenessMinutes = lastRefresh
-    ? Math.floor((Date.now() - lastRefresh.getTime()) / 60000)
+  const stalenessMinutes = lastRefreshedAt
+    ? Math.floor((Date.now() - lastRefreshedAt.getTime()) / 60000)
     : null;
 
-  const runningDurationMs = loading && refreshStartedAt
+  const runningDurationMs = isRefreshing && refreshStartedAt
     ? Math.max(0, nowMs - refreshStartedAt)
     : null;
 
@@ -59,41 +57,51 @@ export default function InfraStatusBar() {
         <Button
           variant="outlined"
           size="small"
-          startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+          startIcon={isRefreshing ? <CircularProgress size={16} /> : <RefreshIcon />}
           onClick={refresh}
-          disabled={loading}
+          disabled={isRefreshing}
         >
           Refresh
         </Button>
-        {loading && (
+        {isRefreshing && (
           <Typography variant="body2" color="text.secondary">
             {refreshProgress.done}/{refreshProgress.total} refreshed
             {runningDurationLabel && ` (${runningDurationLabel})`}
           </Typography>
         )}
-        {durationLabel && !loading && (
+        {durationLabel && !isRefreshing && (
           <Typography variant="body2" color="text.secondary">
             took {durationLabel}
           </Typography>
         )}
-        {!loading && stalenessMinutes !== null && stalenessMinutes >= 5 && (
+        {!isRefreshing && stalenessMinutes !== null && stalenessMinutes >= 5 && (
           <Typography variant="body2" color="warning.main">
             Data is {stalenessMinutes} minutes old — Refresh?
           </Typography>
         )}
-        {lastRefresh && stalenessMinutes !== null && stalenessMinutes < 5 && (
+        {!isRefreshing && lastRefreshedAt && stalenessMinutes !== null && stalenessMinutes < 5 && (
           <Typography variant="body2" color="text.secondary">
-            Updated {lastRefresh.toLocaleTimeString()}
+            Updated {lastRefreshedAt.toLocaleTimeString()}
           </Typography>
         )}
       </Box>
-      {loading && (
+      {isRefreshing && (
         <LinearProgress
           variant="determinate"
           value={progressPercent}
           sx={{ mx: 3, height: 3, borderRadius: 2 }}
         />
       )}
+      <Snackbar
+        open={!!cooldownNotice}
+        autoHideDuration={5000}
+        onClose={dismissCooldownNotice}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissCooldownNotice} severity="info" variant="filled" sx={{ width: '100%' }}>
+          {cooldownNotice}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

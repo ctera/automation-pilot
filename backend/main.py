@@ -35,6 +35,7 @@ from backend.services.infra_monitor import InfraMonitor
 from backend.services.intent_manager import IntentManager
 from backend.services.jenkins_client import JenkinsClient
 from backend.services.orchestrator import Orchestrator
+from backend.services.refresh_service import RefreshService, RefreshCooldownError, RefreshInProgressError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,6 +69,20 @@ class ConnectionManager:
 
 
 ws_manager = ConnectionManager()
+
+AUTO_REFRESH_INTERVAL_SECONDS = 600
+
+
+async def _auto_refresh_loop(refresh_service: RefreshService):
+    """Background task that refreshes infrastructure data every 10 minutes."""
+    while True:
+        await asyncio.sleep(AUTO_REFRESH_INTERVAL_SECONDS)
+        try:
+            await refresh_service.refresh(source="auto")
+        except (RefreshCooldownError, RefreshInProgressError):
+            pass
+        except Exception:
+            logger.exception("Auto-refresh failed")
 
 
 @asynccontextmanager
@@ -117,9 +132,16 @@ async def lifespan(app: FastAPI):
         },
     )
 
+    refresh_service = RefreshService(
+        infra_monitor=infra_monitor,
+        jenkins_client=jenkins_client,
+        db=db,
+        ws_broadcast=ws_manager.broadcast,
+    )
+
     webhooks.init_webhooks(intent_manager, orchestrator)
     intents.init_intents(intent_manager, jenkins_client)
-    infrastructure.init_infrastructure(infra_monitor, db)
+    infrastructure.init_infrastructure(refresh_service)
     decisions.init_decisions(decision_logger)
     settings.init_settings(db)
     jobs.init_jobs(db)
@@ -127,9 +149,18 @@ async def lifespan(app: FastAPI):
     portal_triggers.init_portal_triggers(jenkins_client)
 
     app.state.ws_manager = ws_manager
+    app.state.refresh_service = refresh_service
+
+    auto_refresh_task = asyncio.create_task(_auto_refresh_loop(refresh_service))
 
     logger.info("automation-pilot ready on port %d", port)
     yield
+
+    auto_refresh_task.cancel()
+    try:
+        await auto_refresh_task
+    except asyncio.CancelledError:
+        pass
 
     db.close()
     logger.info("automation-pilot shut down")

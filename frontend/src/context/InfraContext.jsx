@@ -1,25 +1,8 @@
-import { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
-import {
-  refreshDatastores,
-  refreshHosts,
-  refreshVmFolders,
-  getJenkinsJobStatuses,
-} from '../services/api';
+import { createContext, useContext, useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { refreshInfra, getInfraStatus } from '../services/api';
+import { useWebSocket } from '../services/websocket';
 
 const InfraContext = createContext(null);
-
-const REFRESH_COOLDOWN_MS = 10_000;
-const STORAGE_KEY = 'pilot_last_refresh_ts';
-const TOTAL_SLICES = 4;
-
-function getLastRefreshTs() {
-  const val = sessionStorage.getItem(STORAGE_KEY);
-  return val ? Number(val) : 0;
-}
-
-function setLastRefreshTs(ts) {
-  sessionStorage.setItem(STORAGE_KEY, String(ts));
-}
 
 export function InfraProvider({ children }) {
   const [datastores, setDatastores] = useState(null);
@@ -27,75 +10,87 @@ export function InfraProvider({ children }) {
   const [hosts, setHosts] = useState(null);
   const [vmCounts, setVmCounts] = useState(null);
   const [jenkinsJobs, setJenkinsJobs] = useState(null);
-
-  const [lastRefresh, setLastRefresh] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshStartedAt, setRefreshStartedAt] = useState(null);
   const [refreshDurationMs, setRefreshDurationMs] = useState(null);
-  const [refreshProgress, setRefreshProgress] = useState({ total: TOTAL_SLICES, done: 0 });
+  const [refreshProgress, setRefreshProgress] = useState({ total: 4, done: 0 });
+  const [cooldownNotice, setCooldownNotice] = useState(null);
   const [error, setError] = useState(null);
-  const startTimeRef = useRef(null);
-  const inFlightRef = useRef(false);
-  const doneCountRef = useRef(0);
+
+  const { lastMessage } = useWebSocket();
+
+  const applySnapshot = useCallback((data) => {
+    if (!data) return;
+    setDatastores(data.datastores || []);
+    setClusterUsagePercent(data.cluster_usage_percent ?? null);
+    setHosts(data.hosts || []);
+    setVmCounts(data.vm_counts || []);
+    setJenkinsJobs(data.jenkins_jobs || []);
+  }, []);
+
+  const loadCached = useCallback(async () => {
+    try {
+      const resp = await getInfraStatus();
+      const { data, is_refreshing, last_refreshed_at } = resp.data;
+      if (data) applySnapshot(data);
+      setIsRefreshing(is_refreshing);
+      if (last_refreshed_at) setLastRefreshedAt(new Date(last_refreshed_at));
+    } catch {
+      // ignore — will be populated on first refresh
+    }
+  }, [applySnapshot]);
+
+  const initialLoadDone = useRef(false);
+  useEffect(() => {
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      loadCached();
+    }
+  }, [loadCached]);
+
+  const dismissCooldownNotice = useCallback(() => setCooldownNotice(null), []);
 
   const refresh = useCallback(async () => {
-    const now = Date.now();
-    if (inFlightRef.current || now - getLastRefreshTs() < REFRESH_COOLDOWN_MS) {
-      return;
-    }
-    inFlightRef.current = true;
-    doneCountRef.current = 0;
-    setLastRefreshTs(now);
-    setRefreshStartedAt(now);
-    startTimeRef.current = performance.now();
-    setLoading(true);
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setRefreshStartedAt(Date.now());
+    setRefreshDurationMs(null);
+    setRefreshProgress({ total: 4, done: 0 });
+    setCooldownNotice(null);
     setError(null);
-    setRefreshProgress({ total: TOTAL_SLICES, done: 0 });
+    const t0 = performance.now();
+    try {
+      const resp = await refreshInfra();
+      applySnapshot(resp.data);
+      setLastRefreshedAt(new Date());
+      setRefreshDurationMs(Math.round(performance.now() - t0));
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        const retryAfter = err.response?.data?.retry_after_seconds;
+        setCooldownNotice(
+          `Data was refreshed recently. Please wait ${retryAfter || 60} seconds before refreshing again.`
+        );
+        await loadCached();
+      } else {
+        setError(err?.response?.data?.detail || err?.message || 'Refresh failed');
+      }
+      setRefreshDurationMs(null);
+    } finally {
+      setIsRefreshing(false);
+      setRefreshStartedAt(null);
+    }
+  }, [isRefreshing, applySnapshot, loadCached]);
 
-    const tick = () => {
-      doneCountRef.current += 1;
-      setRefreshProgress({ total: TOTAL_SLICES, done: doneCountRef.current });
-    };
-
-    const promises = [
-      refreshDatastores()
-        .then((r) => {
-          setDatastores(r.data.datastores);
-          setClusterUsagePercent(r.data.cluster_usage_percent);
-          tick();
-        })
-        .catch((err) => {
-          setError(err?.response?.data?.detail || err?.message);
-          tick();
-        }),
-      refreshHosts()
-        .then((r) => {
-          setHosts(r.data.hosts);
-          tick();
-        })
-        .catch(() => tick()),
-      refreshVmFolders()
-        .then((r) => {
-          setVmCounts(r.data.vm_counts);
-          tick();
-        })
-        .catch(() => tick()),
-      getJenkinsJobStatuses()
-        .then((r) => {
-          setJenkinsJobs(r.data);
-          tick();
-        })
-        .catch(() => tick()),
-    ];
-
-    await Promise.allSettled(promises);
-
-    setRefreshDurationMs(Math.round(performance.now() - startTimeRef.current));
-    setLastRefresh(new Date());
-    setLoading(false);
-    setRefreshStartedAt(null);
-    inFlightRef.current = false;
-  }, []);
+  useEffect(() => {
+    if (lastMessage?.type === 'infra_refreshed') {
+      const ts = lastMessage.last_refreshed_at;
+      if (ts) setLastRefreshedAt(new Date(ts));
+      loadCached();
+    } else if (lastMessage?.type === 'infra_refresh_progress') {
+      setRefreshProgress({ total: lastMessage.total, done: lastMessage.done });
+    }
+  }, [lastMessage, loadCached]);
 
   const infraData = useMemo(() => {
     if (!datastores && !hosts && !vmCounts) return null;
@@ -132,18 +127,22 @@ export function InfraProvider({ children }) {
       hosts,
       vmCounts,
       jenkinsJobs,
-      lastRefresh,
-      loading,
+      lastRefreshedAt,
+      isRefreshing,
       refreshStartedAt,
       refreshDurationMs,
       refreshProgress,
+      cooldownNotice,
+      dismissCooldownNotice,
+      loading: isRefreshing,
       error,
       refresh,
     }),
     [
       infraData, datastores, clusterUsagePercent, hosts, vmCounts,
-      jenkinsJobs, lastRefresh, loading, refreshStartedAt,
-      refreshDurationMs, refreshProgress, error, refresh,
+      jenkinsJobs, lastRefreshedAt, isRefreshing, refreshStartedAt,
+      refreshDurationMs, refreshProgress, cooldownNotice, dismissCooldownNotice,
+      error, refresh,
     ]
   );
 

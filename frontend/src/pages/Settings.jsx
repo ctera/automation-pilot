@@ -235,6 +235,7 @@ export default function Settings() {
     try {
       await updateSetting(key, value);
       setSaved(true);
+      sessionStorage.setItem('pilot_settings_changed', 'true');
       setTimeout(() => setSaved(false), 2000);
       load();
     } catch { /* ignore */ }

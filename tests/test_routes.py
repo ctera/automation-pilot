@@ -43,8 +43,7 @@ def app_client(db):
     webhooks._orchestrator = MagicMock()
     intents._intent_manager = intent_mgr
     intents._jenkins_client = MagicMock()
-    infrastructure._infra_monitor = MagicMock()
-    infrastructure._db = db
+    infrastructure._refresh_service = MagicMock()
     decisions._decision_logger = decision_lgr
     settings._db = db
     jobs._db = db
