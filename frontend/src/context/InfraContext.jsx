@@ -15,7 +15,7 @@ export function InfraProvider({ children }) {
   const [refreshStartedAt, setRefreshStartedAt] = useState(null);
   const [refreshDurationMs, setRefreshDurationMs] = useState(null);
   const [refreshProgress, setRefreshProgress] = useState({ total: 4, done: 0 });
-  const [cooldownNotice, setCooldownNotice] = useState(null);
+  const [fromCache, setFromCache] = useState(false);
   const [error, setError] = useState(null);
 
   const { lastMessage } = useWebSocket();
@@ -49,48 +49,65 @@ export function InfraProvider({ children }) {
     }
   }, [loadCached]);
 
-  const dismissCooldownNotice = useCallback(() => setCooldownNotice(null), []);
+  const STALENESS_THRESHOLD_MS = 2 * 60 * 1000;
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = true) => {
     if (isRefreshing) return;
+
+    if (!force && lastRefreshedAt) {
+      const age = Date.now() - lastRefreshedAt.getTime();
+      if (age < STALENESS_THRESHOLD_MS) return;
+    }
+
     setIsRefreshing(true);
     setRefreshStartedAt(Date.now());
     setRefreshDurationMs(null);
     setRefreshProgress({ total: 4, done: 0 });
-    setCooldownNotice(null);
+    setFromCache(false);
     setError(null);
     const t0 = performance.now();
     try {
       const resp = await refreshInfra();
-      applySnapshot(resp.data);
-      setLastRefreshedAt(new Date());
-      setRefreshDurationMs(Math.round(performance.now() - t0));
-    } catch (err) {
-      if (err?.response?.status === 409) {
-        const retryAfter = err.response?.data?.retry_after_seconds;
-        setCooldownNotice(
-          `Data was refreshed recently. Please wait ${retryAfter || 60} seconds before refreshing again.`
-        );
-        await loadCached();
-      } else {
-        setError(err?.response?.data?.detail || err?.message || 'Refresh failed');
+      const { from_cache, last_refreshed_at, ...data } = resp.data;
+      applySnapshot(data);
+      setFromCache(!!from_cache);
+      if (last_refreshed_at) {
+        setLastRefreshedAt(new Date(last_refreshed_at));
+      } else if (!from_cache) {
+        setLastRefreshedAt(new Date());
       }
+      if (!from_cache) {
+        setRefreshDurationMs(Math.round(performance.now() - t0));
+      }
+    } catch (err) {
+      setError(err?.response?.data?.detail || err?.message || 'Refresh failed');
       setRefreshDurationMs(null);
     } finally {
       setIsRefreshing(false);
       setRefreshStartedAt(null);
     }
-  }, [isRefreshing, applySnapshot, loadCached]);
+  }, [isRefreshing, lastRefreshedAt, applySnapshot]);
 
   useEffect(() => {
     if (lastMessage?.type === 'infra_refreshed') {
       const ts = lastMessage.last_refreshed_at;
       if (ts) setLastRefreshedAt(new Date(ts));
+      if (refreshStartedAt) {
+        setRefreshDurationMs(Math.round(Date.now() - refreshStartedAt));
+      }
+      setIsRefreshing(false);
+      setRefreshStartedAt(null);
+      setFromCache(false);
       loadCached();
     } else if (lastMessage?.type === 'infra_refresh_progress') {
+      if (!isRefreshing) {
+        setIsRefreshing(true);
+        setRefreshStartedAt(Date.now());
+        setRefreshDurationMs(null);
+      }
       setRefreshProgress({ total: lastMessage.total, done: lastMessage.done });
     }
-  }, [lastMessage, loadCached]);
+  }, [lastMessage, loadCached, isRefreshing, refreshStartedAt]);
 
   const infraData = useMemo(() => {
     if (!datastores && !hosts && !vmCounts) return null;
@@ -132,8 +149,7 @@ export function InfraProvider({ children }) {
       refreshStartedAt,
       refreshDurationMs,
       refreshProgress,
-      cooldownNotice,
-      dismissCooldownNotice,
+      fromCache,
       loading: isRefreshing,
       error,
       refresh,
@@ -141,7 +157,7 @@ export function InfraProvider({ children }) {
     [
       infraData, datastores, clusterUsagePercent, hosts, vmCounts,
       jenkinsJobs, lastRefreshedAt, isRefreshing, refreshStartedAt,
-      refreshDurationMs, refreshProgress, cooldownNotice, dismissCooldownNotice,
+      refreshDurationMs, refreshProgress, fromCache,
       error, refresh,
     ]
   );

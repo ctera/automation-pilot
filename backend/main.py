@@ -74,9 +74,17 @@ AUTO_REFRESH_INTERVAL_SECONDS = 600
 
 
 async def _auto_refresh_loop(refresh_service: RefreshService):
-    """Background task that refreshes infrastructure data every 10 minutes."""
+    """Background task that refreshes infrastructure data every 10 minutes, scheduled relative to last refresh."""
+    from datetime import datetime, timezone
+
     while True:
-        await asyncio.sleep(AUTO_REFRESH_INTERVAL_SECONDS)
+        last = refresh_service.last_refresh_at
+        if last is not None:
+            elapsed = (datetime.now(timezone.utc) - last).total_seconds()
+            wait = max(AUTO_REFRESH_INTERVAL_SECONDS - elapsed, 10)
+        else:
+            wait = 10
+        await asyncio.sleep(wait)
         try:
             await refresh_service.refresh(source="auto")
         except (RefreshCooldownError, RefreshInProgressError):

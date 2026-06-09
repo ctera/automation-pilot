@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
 
 from backend.services.refresh_service import (
     RefreshCooldownError,
@@ -29,20 +28,15 @@ async def refresh_infrastructure():
     _ensure_initialized()
     try:
         snapshot = await _refresh_service.refresh(source="manual")
-        return snapshot
+        return {**snapshot, "from_cache": False}
     except RefreshInProgressError:
-        return JSONResponse(
-            status_code=409,
-            content={"detail": "Refresh already in progress", "retry_after_seconds": 0},
-        )
-    except RefreshCooldownError as exc:
-        return JSONResponse(
-            status_code=409,
-            content={
-                "detail": "Refresh cooldown active",
-                "retry_after_seconds": round(exc.retry_after),
-            },
-        )
+        cached = _refresh_service.get_cached_data()
+        status = _refresh_service.get_status()
+        return {**(cached or {}), "from_cache": True, "last_refreshed_at": status["last_refreshed_at"]}
+    except RefreshCooldownError:
+        cached = _refresh_service.get_cached_data()
+        status = _refresh_service.get_status()
+        return {**(cached or {}), "from_cache": True, "last_refreshed_at": status["last_refreshed_at"]}
 
 
 @router.get("/infrastructure/status")

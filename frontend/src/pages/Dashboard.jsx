@@ -22,7 +22,7 @@ export default function Dashboard() {
     const settingsChanged = sessionStorage.getItem(SETTINGS_CHANGED_KEY) === 'true';
     sessionStorage.removeItem(SETTINGS_CHANGED_KEY);
     if (settingsChanged) {
-      refreshRef.current();
+      refreshRef.current(false);
     }
   }, []);
 

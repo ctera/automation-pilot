@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Typography, CircularProgress, LinearProgress, Snackbar, Alert } from '@mui/material';
+import { Box, Button, Typography, CircularProgress, LinearProgress } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useInfra } from '../../context/InfraContext';
 import StatusBadge from '../StatusBadge';
 import WidgetInfoTip from '../WidgetInfoTip';
+
+const AUTO_REFRESH_INTERVAL_S = 600;
 
 export default function InfraStatusBar() {
   const {
@@ -13,23 +15,18 @@ export default function InfraStatusBar() {
     refreshStartedAt,
     refreshDurationMs,
     refreshProgress,
-    cooldownNotice,
-    dismissCooldownNotice,
+    fromCache,
     refresh,
   } = useInfra();
   const state = infraData?.state || 'unknown';
   const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
-    if (!isRefreshing) return undefined;
     setNowMs(Date.now());
-    const timerId = setInterval(() => setNowMs(Date.now()), 100);
+    const interval = isRefreshing ? 100 : 1000;
+    const timerId = setInterval(() => setNowMs(Date.now()), interval);
     return () => clearInterval(timerId);
   }, [isRefreshing]);
-
-  const stalenessMinutes = lastRefreshedAt
-    ? Math.floor((Date.now() - lastRefreshedAt.getTime()) / 60000)
-    : null;
 
   const runningDurationMs = isRefreshing && refreshStartedAt
     ? Math.max(0, nowMs - refreshStartedAt)
@@ -48,6 +45,15 @@ export default function InfraStatusBar() {
   const progressPercent = refreshProgress.total > 0
     ? (refreshProgress.done / refreshProgress.total) * 100
     : 0;
+
+  let nextRefreshLabel = null;
+  if (!isRefreshing && lastRefreshedAt) {
+    const elapsedS = (nowMs - lastRefreshedAt.getTime()) / 1000;
+    const remainingS = Math.max(0, Math.ceil(AUTO_REFRESH_INTERVAL_S - elapsedS));
+    const mins = Math.floor(remainingS / 60);
+    const secs = remainingS % 60;
+    nextRefreshLabel = `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -74,14 +80,15 @@ export default function InfraStatusBar() {
             took {durationLabel}
           </Typography>
         )}
-        {!isRefreshing && stalenessMinutes !== null && stalenessMinutes >= 5 && (
-          <Typography variant="body2" color="warning.main">
-            Data is {stalenessMinutes} minutes old — Refresh?
-          </Typography>
-        )}
-        {!isRefreshing && lastRefreshedAt && stalenessMinutes !== null && stalenessMinutes < 5 && (
+        {!isRefreshing && lastRefreshedAt && (
           <Typography variant="body2" color="text.secondary">
             Updated {lastRefreshedAt.toLocaleTimeString()}
+            {fromCache && ' (cached)'}
+          </Typography>
+        )}
+        {nextRefreshLabel && (
+          <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.7 }}>
+            next in {nextRefreshLabel}
           </Typography>
         )}
       </Box>
@@ -92,16 +99,6 @@ export default function InfraStatusBar() {
           sx={{ mx: 3, height: 3, borderRadius: 2 }}
         />
       )}
-      <Snackbar
-        open={!!cooldownNotice}
-        autoHideDuration={5000}
-        onClose={dismissCooldownNotice}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert onClose={dismissCooldownNotice} severity="info" variant="filled" sx={{ width: '100%' }}>
-          {cooldownNotice}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

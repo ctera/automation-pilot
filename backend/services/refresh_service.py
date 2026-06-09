@@ -51,8 +51,17 @@ class RefreshService:
         self._ws_broadcast = ws_broadcast
         self._lock = asyncio.Lock()
         self._is_refreshing = False
-        self._last_refresh_at: Optional[datetime] = None
+        self._last_refresh_at: Optional[datetime] = self._load_last_refresh_time()
         self._last_source: Optional[str] = None
+
+    def _load_last_refresh_time(self) -> Optional[datetime]:
+        cursor = self._db.execute(
+            "SELECT timestamp FROM infra_snapshots ORDER BY timestamp DESC LIMIT 1"
+        )
+        row = cursor.fetchone()
+        if row and row["timestamp"]:
+            return datetime.fromisoformat(row["timestamp"]).replace(tzinfo=timezone.utc)
+        return None
 
     @property
     def is_refreshing(self) -> bool:
