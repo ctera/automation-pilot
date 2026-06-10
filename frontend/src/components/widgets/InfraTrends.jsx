@@ -135,6 +135,7 @@ export function StorageTrendChart() {
           fill="url(#storageGradient)"
           strokeWidth={2}
           dot={false}
+          connectNulls
         />
       </AreaChart>
     </ResponsiveContainer>
@@ -187,6 +188,7 @@ export function HostCpuTrendChart() {
             stroke={HOST_COLORS[idx % HOST_COLORS.length]}
             strokeWidth={1.5}
             dot={false}
+            connectNulls
           />
         ))}
       </LineChart>
@@ -240,6 +242,7 @@ export function HostRamTrendChart() {
             stroke={HOST_COLORS[idx % HOST_COLORS.length]}
             strokeWidth={1.5}
             dot={false}
+            connectNulls
           />
         ))}
       </LineChart>

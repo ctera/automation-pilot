@@ -76,13 +76,17 @@ async def get_infra_history(
         step = len(snapshots) / max_points
         snapshots = [snapshots[int(i * step)] for i in range(max_points)]
 
+    def _nullify(val):
+        return val if val is not None and val >= 0 else None
+
     points = []
     for snap in snapshots:
+        cluster = snap.get("cluster_usage_percent")
         point = {
             "timestamp": snap.get("timestamp"),
-            "cluster_usage_percent": snap.get("cluster_usage_percent"),
+            "cluster_usage_percent": _nullify(cluster),
             "hosts": [
-                {"ip": h.get("ip"), "cpu_percent": h.get("cpu_percent"), "memory_percent": h.get("memory_percent")}
+                {"ip": h.get("ip"), "cpu_percent": _nullify(h.get("cpu_percent")), "memory_percent": _nullify(h.get("memory_percent"))}
                 for h in (snap.get("hosts") or [])
             ],
             "vm_powered_on": sum(

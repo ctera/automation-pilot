@@ -136,7 +136,7 @@ class InfraMonitor:
     def calculate_cluster_usage(datastores: list[DatastoreStatus]) -> float:
         valid = [ds for ds in datastores if ds.usage_percent >= 0]
         if not valid:
-            return 0.0
+            return -1.0
         return sum(ds.usage_percent for ds in valid) / len(valid)
 
     @staticmethod
