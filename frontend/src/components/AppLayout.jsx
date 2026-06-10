@@ -118,7 +118,7 @@ export default function AppLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: 1.5,
           mt: '64px',
           ml: drawerOpen ? 0 : `-${DRAWER_WIDTH}px`,
           transition: 'margin 0.2s',

@@ -100,8 +100,11 @@ class HostStatus(BaseModel):
 
 class FolderVmCount(BaseModel):
     folder: str
+    group: str = ""
     count: int
     powered_on: int = 0
+    suspended: int = 0
+    powered_off: int = 0
 
 
 class InfraSnapshot(BaseModel):

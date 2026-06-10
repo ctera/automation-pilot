@@ -17,7 +17,7 @@ from backend.config import (
     get_thresholds,
     get_vm_folders,
 )
-from backend.db import save_infra_snapshot
+from backend.db import prune_old_snapshots, save_infra_snapshot
 from backend.services.infra_monitor import InfraMonitor
 from backend.services.jenkins_client import JenkinsClient
 
@@ -134,6 +134,8 @@ class RefreshService:
         ds_host = get_datastore_host(self._db)
         hosts_cfg = get_hosts(self._db)
         folders = get_vm_folders(self._db)
+        folder_paths = [f["path"] for f in folders]
+        group_map = {f["path"]: f.get("group", "") for f in folders}
         dc = get_datacenter(self._db)
         thresholds = get_thresholds(self._db)
 
@@ -150,8 +152,10 @@ class RefreshService:
         await self._broadcast_progress(2, total_stages, "vm_folders")
 
         vm_counts = await asyncio.to_thread(
-            self._infra_monitor.get_all_vm_counts, folders, dc
+            self._infra_monitor.get_all_vm_counts, folder_paths, dc
         )
+        for vc in vm_counts:
+            vc.group = group_map.get(vc.folder, "")
         await self._broadcast_progress(3, total_stages, "jenkins")
 
         monitored_jobs = get_monitored_jenkins_jobs(self._db)
@@ -185,4 +189,5 @@ class RefreshService:
         snapshot_dict["jenkins_jobs"] = jenkins_jobs
 
         save_infra_snapshot(self._db, snapshot_dict)
+        prune_old_snapshots(self._db, keep_days=30)
         return snapshot_dict

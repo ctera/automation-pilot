@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -207,3 +207,47 @@ def save_infra_snapshot(conn: sqlite3.Connection, data: dict) -> int:
     )
     conn.commit()
     return cursor.lastrowid
+
+
+def _sqlite_ts(dt: datetime) -> str:
+    """Format datetime to match SQLite's CURRENT_TIMESTAMP format."""
+    utc = dt.astimezone(timezone.utc) if dt.tzinfo else dt
+    return utc.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_infra_snapshots_since(
+    conn: sqlite3.Connection, since_dt: datetime, limit: int = 500
+) -> list[dict]:
+    """Fetch snapshots newer than since_dt, ordered by timestamp ASC."""
+    cursor = conn.execute(
+        "SELECT timestamp, data FROM infra_snapshots WHERE timestamp >= ? ORDER BY timestamp ASC LIMIT ?",
+        (_sqlite_ts(since_dt), limit),
+    )
+    rows = cursor.fetchall()
+    results = []
+    for row in rows:
+        parsed = json.loads(row["data"])
+        parsed["timestamp"] = row["timestamp"]
+        results.append(parsed)
+    return results
+
+
+def get_snapshot_count(conn: sqlite3.Connection, since_dt: datetime) -> int:
+    """Count snapshots in range (for downsampling decisions)."""
+    cursor = conn.execute(
+        "SELECT COUNT(*) as cnt FROM infra_snapshots WHERE timestamp >= ?",
+        (_sqlite_ts(since_dt),),
+    )
+    return cursor.fetchone()["cnt"]
+
+
+def prune_old_snapshots(conn: sqlite3.Connection, keep_days: int = 30) -> int:
+    """Delete snapshots older than keep_days. Returns number of rows deleted."""
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=keep_days)
+    cursor = conn.execute(
+        "DELETE FROM infra_snapshots WHERE timestamp < ?",
+        (_sqlite_ts(cutoff),),
+    )
+    conn.commit()
+    return cursor.rowcount

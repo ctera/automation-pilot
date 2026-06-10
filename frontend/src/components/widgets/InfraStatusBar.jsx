@@ -57,7 +57,7 @@ export default function InfraStatusBar() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, px: 3, py: 2.5, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1.5, flexWrap: 'wrap' }}>
         <StatusBadge state={state} />
         <WidgetInfoTip text="Overall infrastructure state: Ready (all resources available), Constrained (approaching limits), or Saturated (at capacity). Click Refresh to re-scan all hosts, datastores, VM folders, and Jenkins jobs." />
         <Button

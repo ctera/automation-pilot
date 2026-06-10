@@ -59,6 +59,9 @@ async def update_setting(key: str, body: SettingUpdate):
         raise HTTPException(400, f"Unknown setting: {key}. Allowed: {sorted(ALLOWED_KEYS)}")
     value = body.value
     if key == "vm_folders" and isinstance(value, list):
-        value = [v.strip().lstrip("/") for v in value if isinstance(v, str)]
+        value = [
+            {"path": v["path"].strip().lstrip("/"), "group": v.get("group", "")}
+            for v in value if isinstance(v, dict) and "path" in v
+        ]
     set_setting(_db, key, value)
     return {"key": key, "value": value}

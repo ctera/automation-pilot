@@ -84,9 +84,11 @@ class InfraMonitor:
         if vms is not None:
             total = len(vms)
             powered_on = sum(1 for vm in vms if vm.get("powerState") == "poweredOn")
-            return FolderVmCount(folder=folder, count=total, powered_on=powered_on)
+            suspended = sum(1 for vm in vms if vm.get("powerState") == "suspended")
+            powered_off = sum(1 for vm in vms if vm.get("powerState") == "poweredOff")
+            return FolderVmCount(folder=folder, count=total, powered_on=powered_on, suspended=suspended, powered_off=powered_off)
         count = self.count_vms_in_folder(folder, datacenter)
-        return FolderVmCount(folder=folder, count=count, powered_on=0)
+        return FolderVmCount(folder=folder, count=count, powered_on=0, suspended=0, powered_off=0)
 
     def get_all_datastores(self, datastores: list[str], host: str) -> list[DatastoreStatus]:
         def _fetch(ds: str) -> DatastoreStatus:

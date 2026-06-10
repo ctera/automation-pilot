@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Card, CardContent, Typography, Chip, Tooltip, Link, Skeleton,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box, Button,
@@ -15,8 +15,17 @@ const TEAM_COLORS = {
   Gateway: '#FBBF24',
 };
 
+function RunningDots() {
+  const [dotCount, setDotCount] = useState(3);
+  useEffect(() => {
+    const id = setInterval(() => setDotCount((c) => (c % 3) + 1), 500);
+    return () => clearInterval(id);
+  }, []);
+  return <span>Running{'.'.repeat(dotCount)}<span style={{ visibility: 'hidden' }}>{'.'.repeat(3 - dotCount)}</span></span>;
+}
+
 const STATUS_META = {
-  running: { label: 'Running', color: 'info', variant: 'filled' },
+  running: { label: <RunningDots />, color: 'info', variant: 'filled' },
   success: { label: 'Success', color: 'success', variant: 'filled' },
   failure: { label: 'Failed', color: 'error', variant: 'filled' },
   unstable: { label: 'Unstable', color: 'warning', variant: 'filled' },
@@ -104,11 +113,24 @@ function DetailsCell({ params }) {
 export default function JenkinsJobsStatus() {
   const { jenkinsJobs, loading } = useInfra();
   const [activeTeams, setActiveTeams] = useState(new Set(ALL_TEAMS));
+  const filterBarRef = useRef(null);
   const groups = getJobGroups(jenkinsJobs || []);
   const filteredGroups = groups.filter(({ job }) => activeTeams.has(job.team));
 
+  const stableToggle = useCallback((updater) => {
+    const el = filterBarRef.current;
+    const offsetBefore = el ? el.getBoundingClientRect().top : null;
+    setActiveTeams(updater);
+    if (el && offsetBefore !== null) {
+      requestAnimationFrame(() => {
+        const offsetAfter = el.getBoundingClientRect().top;
+        window.scrollBy(0, offsetAfter - offsetBefore);
+      });
+    }
+  }, []);
+
   const toggleTeam = (team) => {
-    setActiveTeams((prev) => {
+    stableToggle((prev) => {
       const next = new Set(prev);
       if (next.has(team)) next.delete(team);
       else next.add(team);
@@ -117,7 +139,7 @@ export default function JenkinsJobsStatus() {
   };
 
   const toggleAll = () => {
-    setActiveTeams((prev) =>
+    stableToggle((prev) =>
       prev.size === ALL_TEAMS.length ? new Set() : new Set(ALL_TEAMS),
     );
   };
@@ -164,7 +186,7 @@ export default function JenkinsJobsStatus() {
           Jenkins Jobs
           <WidgetInfoTip text="Real-time build status of monitored Jenkins jobs. Shows which jobs are currently building, their parameters, duration, and links. Configure the job list in Settings." />
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, mb: 0.5 }}>
+        <Box ref={filterBarRef} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, mb: 0.5 }}>
           <Typography variant="body1" color="text.secondary" sx={{ mr: 0.5, whiteSpace: 'nowrap', fontWeight: 500 }}>
             Filter by team
           </Typography>

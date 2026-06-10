@@ -113,6 +113,111 @@ function ThresholdEditor({ thresholds, onSave }) {
   );
 }
 
+const GROUPS = ['Portal', 'CloudFS', 'Gateway'];
+
+const GROUP_COLORS = {
+  Portal: 'primary',
+  CloudFS: 'success',
+  Gateway: 'warning',
+};
+
+function FolderListEditor({ items, onSave }) {
+  const [localItems, setLocalItems] = useState(items || []);
+  const [newPath, setNewPath] = useState('');
+  const [newGroup, setNewGroup] = useState('');
+  const [groupError, setGroupError] = useState(false);
+
+  useEffect(() => { setLocalItems(items || []); }, [items]);
+
+  const handleAdd = () => {
+    if (!newPath.trim()) return;
+    if (!newGroup) {
+      setGroupError(true);
+      return;
+    }
+    setLocalItems([...localItems, { path: newPath.trim(), group: newGroup }]);
+    setNewPath('');
+    setNewGroup('');
+    setGroupError(false);
+  };
+
+  const handleRemove = (index) => {
+    setLocalItems(localItems.filter((_, i) => i !== index));
+  };
+
+  return (
+    <Card sx={{ mb: 2 }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Automation Folders</Typography>
+        <List dense>
+          {localItems.map((item, i) => (
+            <ListItem
+              key={i}
+              secondaryAction={
+                <IconButton edge="end" onClick={() => handleRemove(i)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              }
+            >
+              <ListItemText
+                primary={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2">{item.path}</Typography>
+                    {item.group && (
+                      <Chip
+                        label={item.group}
+                        size="small"
+                        color={GROUP_COLORS[item.group] || 'default'}
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
+        <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'flex-start' }}>
+          <TextField
+            size="small"
+            value={newPath}
+            onChange={(e) => setNewPath(e.target.value)}
+            placeholder="Folder path (e.g. DevProd/QA/PIM)"
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            sx={{ flex: 1 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 140 }} error={groupError}>
+            <InputLabel>Group *</InputLabel>
+            <Select
+              value={newGroup}
+              label="Group *"
+              onChange={(e) => { setNewGroup(e.target.value); setGroupError(false); }}
+            >
+              {GROUPS.map((g) => (
+                <MenuItem key={g} value={g}>{g}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <IconButton onClick={handleAdd}><AddIcon /></IconButton>
+        </Box>
+        {groupError && (
+          <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+            Group is required
+          </Typography>
+        )}
+        <Button
+          variant="contained"
+          size="small"
+          sx={{ mt: 1 }}
+          onClick={() => onSave('vm_folders', localItems)}
+        >
+          Save
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 const TEAMS = ['Portal', 'CloudFS', 'Gateway'];
 
 const TEAM_COLORS = {
@@ -253,7 +358,7 @@ export default function Settings() {
         <Grid size={{ xs: 12, md: 6 }}>
           <EditableList title="ESXi Hosts" items={settings.hosts} settingKey="hosts" onSave={handleSave} />
           <EditableList title="Datastores" items={settings.datastores} settingKey="datastores" onSave={handleSave} />
-          <EditableList title="VM Folders" items={settings.vm_folders} settingKey="vm_folders" onSave={handleSave} />
+          <FolderListEditor items={settings.vm_folders} onSave={handleSave} />
           <JobListEditor items={settings.monitored_jenkins_jobs} onSave={handleSave} />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>

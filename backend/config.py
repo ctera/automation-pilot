@@ -57,8 +57,15 @@ def get_datacenter(conn: sqlite3.Connection) -> str:
     return _get_json_setting(conn, "datacenter") or "CTERA"
 
 
-def get_vm_folders(conn: sqlite3.Connection) -> list[str]:
-    return _get_json_setting(conn, "vm_folders") or []
+def get_vm_folders(conn: sqlite3.Connection) -> list[dict]:
+    raw = _get_json_setting(conn, "vm_folders") or []
+    normalized = []
+    for item in raw:
+        if isinstance(item, str):
+            normalized.append({"path": item, "group": ""})
+        elif isinstance(item, dict) and "path" in item:
+            normalized.append(item)
+    return normalized
 
 
 def get_thresholds(conn: sqlite3.Connection) -> dict:
