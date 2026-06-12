@@ -167,8 +167,7 @@ async def get_infra_trends(
                     host_streaks[ip] = {"count": 0, "since": snap.get("timestamp")}
                 host_streaks[ip]["count"] += 1
             else:
-                if ip in host_streaks and host_streaks[ip]["count"] < 5:
-                    del host_streaks[ip]
+                host_streaks.pop(ip, None)
 
     saturation_streaks = [
         {"host": ip, "metric": "cpu", "consecutive_snapshots": info["count"], "since": info["since"]}
